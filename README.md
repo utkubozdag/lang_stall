@@ -1,4 +1,4 @@
-# LangRead - Language Learning Through Reading
+# LangStall - Language Learning Through Reading
 
 A Readlang alternative that helps you learn languages by reading native content. Built with React, TypeScript, Express, and Gemini AI.
 
