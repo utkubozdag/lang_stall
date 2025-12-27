@@ -28,35 +28,41 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     let prompt: string;
 
+    const target = targetLanguage || 'English';
+
     if (isLongText) {
       // For sentences and passages - provide full translation
-      prompt = `Translate this ${sourceLanguage || ''} text to ${targetLanguage || 'English'}.
+      prompt = `Translate this ${sourceLanguage || ''} text to ${target}.
 
 Text: "${text}"
 
-Respond in this exact format (plain text only, no markdown):
+Respond entirely in ${target} using this exact format (plain text only, no markdown):
 Translation: [your translation here]
 
 Keep the translation natural and accurate.`;
     } else if (context) {
       // For words/short phrases with context
-      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${targetLanguage || 'English'}.
+      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 Context: "${context}"
 
+IMPORTANT: Write your ENTIRE response in ${target}, including the explanation.
+
 Respond in this exact format (plain text only, no markdown):
-Meaning: [2-3 common translations separated by commas]
-Explanation: [one brief sentence about usage in this context]`;
+Meaning: [2-3 common translations in ${target}, separated by commas]
+Explanation: [one brief sentence in ${target} about usage in this context]`;
     } else {
       // For words/short phrases without context
-      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${targetLanguage || 'English'}.
+      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 
+IMPORTANT: Write your ENTIRE response in ${target}, including the explanation.
+
 Respond in this exact format (plain text only, no markdown):
-Meaning: [2-3 common translations separated by commas]
-Explanation: [one brief sentence about common usage]`;
+Meaning: [2-3 common translations in ${target}, separated by commas]
+Explanation: [one brief sentence in ${target} about common usage]`;
     }
 
     const response = await fetch(
