@@ -34,34 +34,29 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
 Text: "${text}"
 
-Provide ONLY plain text (no markdown, no asterisks, no formatting):
-- A clear, natural translation of the full text
-- Keep the same meaning and tone
+Respond in this exact format (plain text only, no markdown):
+Translation: [your translation here]
 
-Just provide the translation, nothing else.`;
+Keep the translation natural and accurate.`;
     } else if (context) {
       // For words/short phrases with context
-      prompt = `You are a language learning assistant. Translate this ${sourceLanguage || ''} word/phrase to ${targetLanguage || 'English'}.
+      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${targetLanguage || 'English'}.
 
 Word: "${text}"
 Context: "${context}"
 
-Provide ONLY plain text (no markdown, no asterisks, no formatting):
-- 2-3 most common meanings/translations
-- One brief sentence explaining how it's used in this context
-
-Be concise.`;
+Respond in this exact format (plain text only, no markdown):
+Meaning: [2-3 common translations separated by commas]
+Explanation: [one brief sentence about usage in this context]`;
     } else {
       // For words/short phrases without context
-      prompt = `You are a language learning assistant. Translate this ${sourceLanguage || ''} word/phrase to ${targetLanguage || 'English'}.
+      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${targetLanguage || 'English'}.
 
 Word: "${text}"
 
-Provide ONLY plain text (no markdown, no asterisks, no formatting):
-- 2-3 most common meanings/translations
-- One brief sentence explaining usage
-
-Be concise.`;
+Respond in this exact format (plain text only, no markdown):
+Meaning: [2-3 common translations separated by commas]
+Explanation: [one brief sentence about common usage]`;
     }
 
     const response = await fetch(

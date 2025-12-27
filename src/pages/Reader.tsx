@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Text } from '../types';
@@ -13,6 +13,9 @@ export default function Reader() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [rangeStartIndex, setRangeStartIndex] = useState<number | null>(null);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isLongPress = useRef(false);
 
   useEffect(() => {
     if (id) {
@@ -34,44 +37,89 @@ export default function Reader() {
     return content.split(/(\s+)/);
   };
 
-  const handleWordClick = (index: number, word: string) => {
-    // Skip whitespace
+  const translateWord = async (word: string) => {
+    if (!word || !text) return;
+
+    setLoading(true);
+    setShowTranslation(false);
+    try {
+      const response = await api.post('/translate', {
+        text: word,
+        sourceLanguage: text.language,
+        targetLanguage: 'English',
+        context: text.content.substring(0, 200),
+      });
+
+      setTranslation(response.data.translation);
+      setShowTranslation(true);
+    } catch (error) {
+      console.error('Translation error:', error);
+      setTranslation('Translation failed. Please try again.');
+      setShowTranslation(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleWordTouchStart = (index: number, word: string) => {
     if (!word.trim()) return;
 
-    if (selectedWords.length === 0) {
-      // First word selected
+    isLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      isLongPress.current = true;
+      // Start range selection
+      setRangeStartIndex(index);
       setSelectedWords([index]);
       setSelectedText(word.trim());
       setShowTranslation(false);
       setTranslation('');
-    } else if (selectedWords.length === 1) {
-      const firstIndex = selectedWords[0];
-      if (index === firstIndex) {
-        // Same word clicked - deselect
-        setSelectedWords([]);
-        setSelectedText('');
-      } else {
-        // Second word clicked - select range
-        const start = Math.min(firstIndex, index);
-        const end = Math.max(firstIndex, index);
-        const words = getWords(text!.content);
-        const range: number[] = [];
-        for (let i = start; i <= end; i++) {
-          range.push(i);
-        }
-        setSelectedWords(range);
-        const phrase = words.slice(start, end + 1).join('').trim();
-        setSelectedText(phrase);
-        setShowTranslation(false);
-        setTranslation('');
-      }
-    } else {
-      // Reset and start new selection
-      setSelectedWords([index]);
-      setSelectedText(word.trim());
-      setShowTranslation(false);
-      setTranslation('');
+    }, 500); // 500ms for long press
+  };
+
+  const handleWordTouchEnd = (index: number, word: string) => {
+    if (!word.trim()) return;
+
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
     }
+
+    // If it was a long press, don't do anything on touch end
+    if (isLongPress.current) {
+      isLongPress.current = false;
+      return;
+    }
+
+    // Check if we're in range selection mode
+    if (rangeStartIndex !== null) {
+      // Complete the range selection
+      const start = Math.min(rangeStartIndex, index);
+      const end = Math.max(rangeStartIndex, index);
+      const words = getWords(text!.content);
+      const range: number[] = [];
+      for (let i = start; i <= end; i++) {
+        range.push(i);
+      }
+      setSelectedWords(range);
+      const phrase = words.slice(start, end + 1).join('').trim();
+      setSelectedText(phrase);
+      setRangeStartIndex(null);
+      // Translate the phrase
+      translateWord(phrase);
+    } else {
+      // Single tap - select word and translate immediately
+      setSelectedWords([index]);
+      setSelectedText(word.trim());
+      translateWord(word.trim());
+    }
+  };
+
+  const handleWordTouchCancel = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    isLongPress.current = false;
   };
 
   const handleTranslate = async () => {
@@ -186,11 +234,17 @@ export default function Reader() {
               return (
                 <span
                   key={index}
-                  onClick={() => handleWordClick(index, word)}
-                  className={`cursor-pointer rounded px-0.5 transition-colors ${
+                  onTouchStart={() => handleWordTouchStart(index, word)}
+                  onTouchEnd={() => handleWordTouchEnd(index, word)}
+                  onTouchCancel={handleWordTouchCancel}
+                  onMouseDown={() => handleWordTouchStart(index, word)}
+                  onMouseUp={() => handleWordTouchEnd(index, word)}
+                  className={`cursor-pointer rounded px-0.5 transition-colors select-none ${
                     isSelected
                       ? 'bg-blue-200 text-blue-900'
-                      : 'hover:bg-gray-100 active:bg-blue-100'
+                      : rangeStartIndex !== null
+                        ? 'hover:bg-yellow-100 active:bg-yellow-200'
+                        : 'hover:bg-gray-100 active:bg-blue-100'
                   }`}
                 >
                   {word}
@@ -200,7 +254,9 @@ export default function Reader() {
           </p>
 
           <p className="text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100">
-            Tap a word to translate. Tap two words to select a phrase.
+            {rangeStartIndex !== null
+              ? 'Tap another word to complete selection'
+              : 'Tap a word to translate. Hold to select a phrase.'}
           </p>
         </div>
       </div>
@@ -224,20 +280,38 @@ export default function Reader() {
               </button>
             </div>
 
-            {!showTranslation ? (
-              <button
-                onClick={handleTranslate}
-                disabled={loading}
-                className="w-full bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition font-medium text-lg"
-              >
-                {loading ? 'Translating...' : 'Translate'}
-              </button>
-            ) : (
+            {loading ? (
+              <div className="bg-gray-50 rounded-lg p-4 text-center">
+                <div className="text-gray-600">Translating...</div>
+              </div>
+            ) : showTranslation ? (
               <div className="space-y-3">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                    {translation}
-                  </div>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  {translation.split('\n').map((line, i) => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return null;
+
+                    // Check if line starts with a label
+                    if (trimmed.toLowerCase().startsWith('meaning:') ||
+                        trimmed.toLowerCase().startsWith('translation:')) {
+                      return (
+                        <div key={i}>
+                          <div className="text-xs font-semibold text-blue-600 uppercase mb-1">Meaning</div>
+                          <div className="text-gray-900 font-medium">{trimmed.replace(/^(meaning|translation):\s*/i, '')}</div>
+                        </div>
+                      );
+                    }
+                    if (trimmed.toLowerCase().startsWith('explanation:') ||
+                        trimmed.toLowerCase().startsWith('usage:')) {
+                      return (
+                        <div key={i}>
+                          <div className="text-xs font-semibold text-green-600 uppercase mb-1">Explanation</div>
+                          <div className="text-gray-700">{trimmed.replace(/^(explanation|usage):\s*/i, '')}</div>
+                        </div>
+                      );
+                    }
+                    return <div key={i} className="text-gray-800">{trimmed}</div>;
+                  })}
                 </div>
                 <div className="flex gap-2">
                   <button
@@ -248,7 +322,7 @@ export default function Reader() {
                     {saving ? 'Saving...' : '+ Save'}
                   </button>
                   <button
-                    onClick={handleTranslate}
+                    onClick={() => translateWord(selectedText)}
                     disabled={loading}
                     className="px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
                   >
@@ -256,7 +330,7 @@ export default function Reader() {
                   </button>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       )}
