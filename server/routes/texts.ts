@@ -232,6 +232,76 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
   }
 });
 
+// Update text
+router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { id } = req.params;
+    const { title, content, language } = req.body;
+
+    // Validate ID is a positive integer
+    const textId = parseInt(id, 10);
+    if (isNaN(textId) || textId <= 0) {
+      return res.status(400).json({ error: 'Invalid text ID' });
+    }
+
+    // Check text exists and belongs to user
+    const existing = await pool.query(
+      'SELECT * FROM texts WHERE id = $1 AND user_id = $2',
+      [textId, userId]
+    );
+
+    if (existing.rows.length === 0) {
+      return res.status(404).json({ error: 'Text not found' });
+    }
+
+    // Build update query dynamically based on provided fields
+    const updates: string[] = [];
+    const values: any[] = [];
+    let paramCount = 1;
+
+    if (title !== undefined) {
+      if (typeof title !== 'string' || title.length > 200) {
+        return res.status(400).json({ error: 'Title too long (max 200 characters)' });
+      }
+      updates.push(`title = $${paramCount++}`);
+      values.push(title);
+    }
+
+    if (content !== undefined) {
+      if (typeof content !== 'string' || content.length > 500000) {
+        return res.status(400).json({ error: 'Content too long (max 500,000 characters)' });
+      }
+      updates.push(`content = $${paramCount++}`);
+      values.push(content);
+    }
+
+    if (language !== undefined) {
+      if (typeof language !== 'string' || language.length > 50) {
+        return res.status(400).json({ error: 'Language name too long' });
+      }
+      updates.push(`language = $${paramCount++}`);
+      values.push(language);
+    }
+
+    if (updates.length === 0) {
+      return res.status(400).json({ error: 'No fields to update' });
+    }
+
+    values.push(textId, userId);
+
+    const result = await pool.query(
+      `UPDATE texts SET ${updates.join(', ')} WHERE id = $${paramCount++} AND user_id = $${paramCount} RETURNING *`,
+      values
+    );
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update text error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Delete text
 router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {

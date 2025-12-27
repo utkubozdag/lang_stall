@@ -15,6 +15,11 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [uploadMode, setUploadMode] = useState<'paste' | 'file'>('paste');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [editingText, setEditingText] = useState<Text | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editContent, setEditContent] = useState('');
+  const [editLanguage, setEditLanguage] = useState('');
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     loadTexts();
@@ -92,6 +97,41 @@ export default function Home() {
       console.error('Error deleting text:', error);
       alert('Failed to delete text');
     }
+  };
+
+  const handleEditClick = (text: Text) => {
+    setEditingText(text);
+    setEditTitle(text.title);
+    setEditContent(text.content);
+    setEditLanguage(text.language);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingText) return;
+
+    setEditLoading(true);
+    try {
+      const response = await api.patch(`/texts/${editingText.id}`, {
+        title: editTitle,
+        content: editContent,
+        language: editLanguage,
+      });
+      setTexts(texts.map((t) => (t.id === editingText.id ? response.data : t)));
+      setEditingText(null);
+    } catch (error: any) {
+      console.error('Error updating text:', error);
+      alert(error.response?.data?.error || 'Failed to update text');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const closeEditModal = () => {
+    setEditingText(null);
+    setEditTitle('');
+    setEditContent('');
+    setEditLanguage('');
   };
 
   return (
@@ -297,14 +337,26 @@ export default function Home() {
                   <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
                     {text.title}
                   </h3>
-                  <button
-                    onClick={() => handleDeleteText(text.id)}
-                    className="text-gray-400 hover:text-red-500 transition"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                    </svg>
-                  </button>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => handleEditClick(text)}
+                      className="text-gray-400 hover:text-blue-500 transition p-1"
+                      title="Edit"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => handleDeleteText(text.id)}
+                      className="text-gray-400 hover:text-red-500 transition p-1"
+                      title="Delete"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
                   <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
@@ -325,6 +377,90 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {editingText && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Edit Text</h3>
+                <button
+                  onClick={closeEditModal}
+                  className="text-gray-400 hover:text-gray-600 transition"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="editTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                      Title
+                    </label>
+                    <input
+                      id="editTitle"
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="editLanguage" className="block text-sm font-medium text-gray-700 mb-2">
+                      Language
+                    </label>
+                    <input
+                      id="editLanguage"
+                      type="text"
+                      value={editLanguage}
+                      onChange={(e) => setEditLanguage(e.target.value)}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="editContent" className="block text-sm font-medium text-gray-700 mb-2">
+                    Content
+                  </label>
+                  <textarea
+                    id="editContent"
+                    value={editContent}
+                    onChange={(e) => setEditContent(e.target.value)}
+                    required
+                    rows={12}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition font-medium"
+                  >
+                    {editLoading ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeEditModal}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
