@@ -1,0 +1,223 @@
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
+import api from '../services/api';
+import { Text } from '../types';
+
+export default function Home() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [texts, setTexts] = useState<Text[]>([]);
+  const [showNewText, setShowNewText] = useState(false);
+  const [title, setTitle] = useState('');
+  const [content, setContent] = useState('');
+  const [language, setLanguage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadTexts();
+  }, []);
+
+  const loadTexts = async () => {
+    try {
+      const response = await api.get('/texts');
+      setTexts(response.data);
+    } catch (error) {
+      console.error('Error loading texts:', error);
+    }
+  };
+
+  const handleCreateText = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await api.post('/texts', { title, content, language });
+      setTexts([response.data, ...texts]);
+      setTitle('');
+      setContent('');
+      setLanguage('');
+      setShowNewText(false);
+    } catch (error) {
+      console.error('Error creating text:', error);
+      alert('Failed to create text');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteText = async (id: number) => {
+    if (!confirm('Delete this text?')) return;
+
+    try {
+      await api.delete(`/texts/${id}`);
+      setTexts(texts.filter((t) => t.id !== id));
+    } catch (error) {
+      console.error('Error deleting text:', error);
+      alert('Failed to delete text');
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <nav className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <h1 className="text-2xl font-bold text-gray-900">LangRead</h1>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/vocabulary')}
+                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 font-medium transition"
+              >
+                Vocabulary
+              </button>
+              <button
+                onClick={() => navigate('/flashcards')}
+                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 font-medium transition"
+              >
+                Practice
+              </button>
+              <button
+                onClick={logout}
+                className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition"
+              >
+                Logout
+              </button>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Welcome Section */}
+        <div className="mb-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Welcome back, {user?.name || 'Reader'}
+          </h2>
+          <p className="text-gray-600">Continue your language learning journey</p>
+        </div>
+
+        {/* New Text Button */}
+        <div className="mb-6">
+          <button
+            onClick={() => setShowNewText(!showNewText)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium shadow-sm"
+          >
+            {showNewText ? 'Cancel' : '+ Add Text'}
+          </button>
+        </div>
+
+        {/* New Text Form */}
+        {showNewText && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Text</h3>
+            <form onSubmit={handleCreateText} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+                    Title
+                  </label>
+                  <input
+                    id="title"
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="My Hungarian Article"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="language" className="block text-sm font-medium text-gray-700 mb-2">
+                    Language
+                  </label>
+                  <input
+                    id="language"
+                    type="text"
+                    value={language}
+                    onChange={(e) => setLanguage(e.target.value)}
+                    required
+                    placeholder="e.g., Hungarian"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                  Text Content
+                </label>
+                <textarea
+                  id="content"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  required
+                  rows={8}
+                  placeholder="Paste your text here..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition font-medium"
+              >
+                {loading ? 'Creating...' : 'Create Text'}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* Texts Grid */}
+        {texts.length === 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
+            <div className="text-gray-400 mb-4">
+              <svg className="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No texts yet</h3>
+            <p className="text-gray-500">Add your first text to start learning!</p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {texts.map((text) => (
+              <div key={text.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition group">
+                <div className="flex justify-between items-start mb-3">
+                  <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition">
+                    {text.title}
+                  </h3>
+                  <button
+                    onClick={() => handleDeleteText(text.id)}
+                    className="text-gray-400 hover:text-red-500 transition"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                  <span className="px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
+                    {text.language}
+                  </span>
+                  <span>•</span>
+                  <span>{new Date(text.created_at).toLocaleDateString()}</span>
+                </div>
+                <p className="text-gray-600 text-sm line-clamp-3 mb-4">{text.content}</p>
+                <button
+                  onClick={() => navigate(`/read/${text.id}`)}
+                  className="w-full bg-blue-50 text-blue-600 py-2 px-4 rounded-lg hover:bg-blue-100 transition font-medium"
+                >
+                  Read
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
