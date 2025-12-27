@@ -40,8 +40,16 @@ const translateLimiter = rateLimit({
   message: { error: 'Too many translation requests, please slow down' },
 });
 
+// CORS configuration
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production'
+    ? process.env.APP_URL || 'https://langstall-production.up.railway.app'
+    : true, // Allow all origins in development
+  credentials: true,
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' })); // Limit body size
 app.use(generalLimiter);
 

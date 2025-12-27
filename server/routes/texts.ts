@@ -26,9 +26,15 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     const userId = req.user!.id;
     const { id } = req.params;
 
+    // Validate ID is a positive integer
+    const textId = parseInt(id, 10);
+    if (isNaN(textId) || textId <= 0) {
+      return res.status(400).json({ error: 'Invalid text ID' });
+    }
+
     const result = await pool.query(
       'SELECT * FROM texts WHERE id = $1 AND user_id = $2',
-      [id, userId]
+      [textId, userId]
     );
 
     if (result.rows.length === 0) {
@@ -83,9 +89,15 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     const userId = req.user!.id;
     const { id } = req.params;
 
+    // Validate ID is a positive integer
+    const textId = parseInt(id, 10);
+    if (isNaN(textId) || textId <= 0) {
+      return res.status(400).json({ error: 'Invalid text ID' });
+    }
+
     const result = await pool.query(
       'DELETE FROM texts WHERE id = $1 AND user_id = $2',
-      [id, userId]
+      [textId, userId]
     );
 
     if (result.rowCount === 0) {

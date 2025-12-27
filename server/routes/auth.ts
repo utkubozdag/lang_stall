@@ -171,12 +171,16 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
     const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
     const user = result.rows[0];
 
+    // Always return same message to prevent user enumeration
+    const genericMessage = 'If an unverified account exists with this email, a verification link has been sent.';
+
     if (!user) {
-      return res.json({ message: 'If an account exists, a verification email has been sent.' });
+      return res.json({ message: genericMessage });
     }
 
     if (user.verified) {
-      return res.status(400).json({ error: 'Email is already verified' });
+      // Don't reveal that account exists and is verified
+      return res.json({ message: genericMessage });
     }
 
     // Generate new token
@@ -188,7 +192,7 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
 
     await sendVerificationEmail(email, verificationToken);
 
-    res.json({ message: 'Verification email sent. Please check your inbox.' });
+    res.json({ message: genericMessage });
   } catch (error) {
     console.error('Resend verification error:', error);
     res.status(500).json({ error: 'Server error' });
@@ -207,6 +211,10 @@ router.patch('/preferences', authenticateToken, async (req: AuthRequest, res: Re
 
     if (!target_language || typeof target_language !== 'string') {
       return res.status(400).json({ error: 'Target language is required' });
+    }
+
+    if (target_language.length > 50) {
+      return res.status(400).json({ error: 'Target language name too long' });
     }
 
     // Update user's target language

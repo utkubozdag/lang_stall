@@ -12,9 +12,33 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Text is required' });
     }
 
-    // Basic type validation only
+    // Type validation
     if (typeof text !== 'string') {
       return res.status(400).json({ error: 'Text must be a string' });
+    }
+
+    // Length validation
+    if (text.length > 1000) {
+      return res.status(400).json({ error: 'Text too long (max 1000 characters)' });
+    }
+
+    // Word count limit (max 15 words per phrase)
+    const wordCount = text.trim().split(/\s+/).length;
+    if (wordCount > 15) {
+      return res.status(400).json({ error: 'Please select at most 15 words at a time' });
+    }
+
+    // Validate optional parameters
+    if (context && (typeof context !== 'string' || context.length > 500)) {
+      return res.status(400).json({ error: 'Context too long (max 500 characters)' });
+    }
+
+    if (targetLanguage && (typeof targetLanguage !== 'string' || targetLanguage.length > 50)) {
+      return res.status(400).json({ error: 'Invalid target language' });
+    }
+
+    if (sourceLanguage && (typeof sourceLanguage !== 'string' || sourceLanguage.length > 50)) {
+      return res.status(400).json({ error: 'Invalid source language' });
     }
 
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -22,8 +46,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
-    // Count words to determine if it's a word/phrase or a longer passage
-    const wordCount = text.trim().split(/\s+/).length;
+    // Determine if it's a word/phrase or a longer passage (wordCount already calculated above)
     const isLongText = wordCount > 5;
 
     let prompt: string;

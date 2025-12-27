@@ -91,9 +91,15 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     const userId = req.user!.id;
     const { id } = req.params;
 
+    // Validate ID is a positive integer
+    const vocabId = parseInt(id, 10);
+    if (isNaN(vocabId) || vocabId <= 0) {
+      return res.status(400).json({ error: 'Invalid vocabulary ID' });
+    }
+
     const result = await pool.query(
       'DELETE FROM vocabulary WHERE id = $1 AND user_id = $2',
-      [id, userId]
+      [vocabId, userId]
     );
 
     if (result.rowCount === 0) {
@@ -114,6 +120,12 @@ router.post('/:id/review', authenticateToken, async (req: AuthRequest, res: Resp
     const { id } = req.params;
     const { quality } = req.body; // 0-5 quality rating
 
+    // Validate ID is a positive integer
+    const vocabId = parseInt(id, 10);
+    if (isNaN(vocabId) || vocabId <= 0) {
+      return res.status(400).json({ error: 'Invalid vocabulary ID' });
+    }
+
     // Validate quality is a number between 0-5
     const qualityNum = Number(quality);
     if (isNaN(qualityNum) || !Number.isInteger(qualityNum) || qualityNum < 0 || qualityNum > 5) {
@@ -122,7 +134,7 @@ router.post('/:id/review', authenticateToken, async (req: AuthRequest, res: Resp
 
     const vocabResult = await pool.query(
       'SELECT * FROM vocabulary WHERE id = $1 AND user_id = $2',
-      [id, userId]
+      [vocabId, userId]
     );
 
     if (vocabResult.rows.length === 0) {
@@ -156,15 +168,15 @@ router.post('/:id/review', authenticateToken, async (req: AuthRequest, res: Resp
 
     await pool.query(
       'UPDATE vocabulary SET interval = $1, ease_factor = $2, review_count = $3, next_review = $4 WHERE id = $5',
-      [interval, ease_factor, review_count, next_review, id]
+      [interval, ease_factor, review_count, next_review, vocabId]
     );
 
     await pool.query(
       'INSERT INTO reviews (vocabulary_id, quality) VALUES ($1, $2)',
-      [id, qualityNum]
+      [vocabId, qualityNum]
     );
 
-    const updatedResult = await pool.query('SELECT * FROM vocabulary WHERE id = $1', [id]);
+    const updatedResult = await pool.query('SELECT * FROM vocabulary WHERE id = $1', [vocabId]);
 
     res.json(updatedResult.rows[0]);
   } catch (error) {

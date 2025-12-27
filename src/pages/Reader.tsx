@@ -134,6 +134,15 @@ export default function Reader() {
       for (let i = start; i <= end; i++) {
         range.push(i);
       }
+
+      // Count actual words (non-whitespace) in selection
+      const selectedWordCount = range.filter(i => words[i]?.trim()).length;
+      if (selectedWordCount > 15) {
+        alert('Please select at most 15 words at a time');
+        setFirstWordIndex(null);
+        return;
+      }
+
       setSelectedWords(range);
       const phrase = words.slice(start, end + 1).join('').trim();
       setSelectedText(phrase);

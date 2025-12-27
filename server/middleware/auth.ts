@@ -3,7 +3,11 @@ import jwt from 'jsonwebtoken';
 import pool from '../db.js';
 import { User } from '../types.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 export interface AuthRequest extends Request {
   user?: User;
