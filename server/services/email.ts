@@ -3,26 +3,31 @@ import crypto from 'crypto';
 
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
-// Create Yahoo SMTP transporter
-// Using port 587 with STARTTLS (more likely to work on cloud platforms)
+// Create Yahoo SMTP transporter with explicit TLS settings
 const transporter = nodemailer.createTransport({
   host: 'smtp.mail.yahoo.com',
-  port: 587,
-  secure: false, // use STARTTLS
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
-  connectionTimeout: 15000, // 15 seconds
-  greetingTimeout: 15000,
-  socketTimeout: 15000,
+  tls: {
+    rejectUnauthorized: true,
+    minVersion: 'TLSv1.2',
+  },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
+  logger: true,
+  debug: true,
 });
 
 export const sendVerificationEmail = async (email: string, token: string): Promise<boolean> => {
   const verificationUrl = `${APP_URL}/verify?token=${token}`;
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"Lang Stall" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Verify your Lang Stall account',
@@ -43,6 +48,7 @@ export const sendVerificationEmail = async (email: string, token: string): Promi
         </div>
       `,
     });
+    console.log('Email sent:', info.messageId);
     return true;
   } catch (error) {
     console.error('Failed to send verification email:', error);
