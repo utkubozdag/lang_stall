@@ -49,11 +49,11 @@ export default function Guide() {
             <ul className="text-gray-600 ml-11 space-y-2">
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">•</span>
-                <span><strong>Tap a word</strong> to instantly translate it</span>
+                <span><strong>Click a word</strong> to instantly translate it</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="text-blue-600 font-bold">•</span>
-                <span><strong>Hold on a word</strong> to start selecting a phrase, then tap another word to complete the selection</span>
+                <span><strong>Click another word</strong> after selecting one to translate the entire phrase between them</span>
               </li>
             </ul>
           </section>

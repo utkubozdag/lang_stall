@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Text } from '../types';
@@ -13,9 +13,7 @@ export default function Reader() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
-  const [rangeStartIndex, setRangeStartIndex] = useState<number | null>(null);
-  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  const isLongPress = useRef(false);
+  const [firstWordIndex, setFirstWordIndex] = useState<number | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -76,41 +74,15 @@ export default function Reader() {
     }
   };
 
-  const handleWordTouchStart = (index: number, word: string) => {
-    if (!word.trim()) return;
+  const handleWordClick = (index: number, word: string) => {
+    if (!word.trim() || !text) return;
 
-    isLongPress.current = false;
-    longPressTimer.current = setTimeout(() => {
-      isLongPress.current = true;
-      // Start range selection
-      setRangeStartIndex(index);
-      setSelectedWords([index]);
-      setSelectedText(word.trim());
-      setShowTranslation(false);
-      setTranslation('');
-    }, 500); // 500ms for long press
-  };
-
-  const handleWordTouchEnd = (index: number, word: string) => {
-    if (!word.trim()) return;
-
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-
-    // If it was a long press, don't do anything on touch end
-    if (isLongPress.current) {
-      isLongPress.current = false;
-      return;
-    }
-
-    // Check if we're in range selection mode
-    if (rangeStartIndex !== null) {
-      // Complete the range selection
-      const start = Math.min(rangeStartIndex, index);
-      const end = Math.max(rangeStartIndex, index);
-      const words = getWords(text!.content);
+    // If a word is already selected and user clicks a different word
+    if (firstWordIndex !== null && firstWordIndex !== index) {
+      // Select the range between first word and this word
+      const start = Math.min(firstWordIndex, index);
+      const end = Math.max(firstWordIndex, index);
+      const words = getWords(text.content);
       const range: number[] = [];
       for (let i = start; i <= end; i++) {
         range.push(i);
@@ -118,45 +90,14 @@ export default function Reader() {
       setSelectedWords(range);
       const phrase = words.slice(start, end + 1).join('').trim();
       setSelectedText(phrase);
-      setRangeStartIndex(null);
-      // Translate the phrase
+      setFirstWordIndex(null); // Reset for next selection
       translateWord(phrase);
     } else {
-      // Single tap - select word and translate immediately
+      // First click or clicking the same word - select single word
       setSelectedWords([index]);
       setSelectedText(word.trim());
+      setFirstWordIndex(index);
       translateWord(word.trim());
-    }
-  };
-
-  const handleWordTouchCancel = () => {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    isLongPress.current = false;
-  };
-
-  const handleTranslate = async () => {
-    if (!selectedText || !text) return;
-
-    setLoading(true);
-    try {
-      const response = await api.post('/translate', {
-        text: selectedText,
-        sourceLanguage: text.language,
-        targetLanguage: 'English',
-        context: getContext(),
-      });
-
-      setTranslation(response.data.translation);
-      setShowTranslation(true);
-    } catch (error) {
-      console.error('Translation error:', error);
-      setTranslation('Translation failed. Please try again.');
-      setShowTranslation(true);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -189,6 +130,7 @@ export default function Reader() {
     setSelectedText('');
     setShowTranslation(false);
     setTranslation('');
+    setFirstWordIndex(null);
   };
 
   const getContext = () => {
@@ -241,6 +183,7 @@ export default function Reader() {
             {words.map((word, index) => {
               const isWhitespace = !word.trim();
               const isSelected = selectedWords.includes(index);
+              const isFirstWord = firstWordIndex === index;
 
               if (isWhitespace) {
                 return <span key={index}>{word}</span>;
@@ -249,16 +192,12 @@ export default function Reader() {
               return (
                 <span
                   key={index}
-                  onTouchStart={() => handleWordTouchStart(index, word)}
-                  onTouchEnd={() => handleWordTouchEnd(index, word)}
-                  onTouchCancel={handleWordTouchCancel}
-                  onMouseDown={() => handleWordTouchStart(index, word)}
-                  onMouseUp={() => handleWordTouchEnd(index, word)}
+                  onClick={() => handleWordClick(index, word)}
                   className={`cursor-pointer rounded px-0.5 transition-colors select-none ${
                     isSelected
                       ? 'bg-blue-200 text-blue-900'
-                      : rangeStartIndex !== null
-                        ? 'hover:bg-yellow-100 active:bg-yellow-200'
+                      : isFirstWord
+                        ? 'bg-yellow-200 text-yellow-900'
                         : 'hover:bg-gray-100 active:bg-blue-100'
                   }`}
                 >
@@ -269,9 +208,9 @@ export default function Reader() {
           </p>
 
           <p className="text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100">
-            {rangeStartIndex !== null
-              ? 'Tap another word to complete selection'
-              : 'Tap a word to translate. Hold to select a phrase.'}
+            {firstWordIndex !== null
+              ? 'Click another word to select a phrase, or click the same word again to keep single word'
+              : 'Click a word to translate. Click another word to translate the phrase between them.'}
           </p>
         </div>
       </div>
