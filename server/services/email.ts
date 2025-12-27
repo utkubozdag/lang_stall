@@ -4,17 +4,18 @@ import crypto from 'crypto';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
 // Create Yahoo SMTP transporter
+// Using port 587 with STARTTLS (more likely to work on cloud platforms)
 const transporter = nodemailer.createTransport({
   host: 'smtp.mail.yahoo.com',
-  port: 465,
-  secure: true, // use SSL
+  port: 587,
+  secure: false, // use STARTTLS
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASSWORD,
   },
-  connectionTimeout: 10000, // 10 seconds
-  greetingTimeout: 10000,
-  socketTimeout: 10000,
+  connectionTimeout: 15000, // 15 seconds
+  greetingTimeout: 15000,
+  socketTimeout: 15000,
 });
 
 export const sendVerificationEmail = async (email: string, token: string): Promise<boolean> => {
