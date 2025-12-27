@@ -65,6 +65,9 @@ export const initDb = async () => {
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_token') THEN
           ALTER TABLE users ADD COLUMN verification_token TEXT;
         END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='target_language') THEN
+          ALTER TABLE users ADD COLUMN target_language TEXT DEFAULT 'English';
+        END IF;
       END $$;
     `);
 

@@ -8,6 +8,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string, nativeLanguage?: string, learningLanguage?: string) => Promise<void>;
   logout: () => void;
+  updateTargetLanguage: (targetLanguage: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -80,8 +81,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
   };
 
+  const updateTargetLanguage = async (targetLanguage: string) => {
+    const response = await api.patch<{ user: User }>('/auth/preferences', {
+      target_language: targetLanguage,
+    });
+    const updatedUser = response.data.user;
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, register, logout, updateTargetLanguage, loading }}>
       {children}
     </AuthContext.Provider>
   );

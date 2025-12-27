@@ -4,6 +4,7 @@ export interface User {
   name?: string;
   native_language?: string;
   learning_language?: string;
+  target_language?: string;
 }
 
 export interface Text {

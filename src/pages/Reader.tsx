@@ -2,10 +2,41 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { Text } from '../types';
+import { useAuth } from '../contexts/AuthContext';
+
+const LANGUAGES = [
+  'English',
+  'Spanish',
+  'German',
+  'French',
+  'Italian',
+  'Portuguese',
+  'Dutch',
+  'Russian',
+  'Chinese',
+  'Japanese',
+  'Korean',
+  'Arabic',
+  'Turkish',
+  'Polish',
+  'Swedish',
+  'Norwegian',
+  'Danish',
+  'Finnish',
+  'Hungarian',
+  'Czech',
+  'Greek',
+  'Hebrew',
+  'Hindi',
+  'Thai',
+  'Vietnamese',
+  'Indonesian',
+];
 
 export default function Reader() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user, updateTargetLanguage } = useAuth();
   const [text, setText] = useState<Text | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
@@ -14,6 +45,7 @@ export default function Reader() {
   const [saving, setSaving] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [firstWordIndex, setFirstWordIndex] = useState<number | null>(null);
+  const [targetLanguage, setTargetLanguage] = useState(user?.target_language || 'English');
 
   useEffect(() => {
     if (id) {
@@ -38,8 +70,8 @@ export default function Reader() {
   const translateWord = async (word: string) => {
     if (!word || !text) return;
 
-    // Check cache first
-    const cacheKey = `translation:${text.language}:${word.toLowerCase()}`;
+    // Check cache first (include target language in cache key)
+    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}`;
     const cached = localStorage.getItem(cacheKey);
 
     if (cached) {
@@ -54,7 +86,7 @@ export default function Reader() {
       const response = await api.post('/translate', {
         text: word,
         sourceLanguage: text.language,
-        targetLanguage: 'English',
+        targetLanguage: targetLanguage,
         context: text.content.substring(0, 200),
       });
 
@@ -71,6 +103,21 @@ export default function Reader() {
       setShowTranslation(true);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLanguageChange = async (newLanguage: string) => {
+    setTargetLanguage(newLanguage);
+    // Save preference to server
+    try {
+      await updateTargetLanguage(newLanguage);
+    } catch (error) {
+      console.error('Failed to save language preference:', error);
+    }
+    // Clear current translation when language changes
+    if (selectedText) {
+      setShowTranslation(false);
+      setTranslation('');
     }
   };
 
@@ -168,9 +215,23 @@ export default function Reader() {
             </svg>
             Back
           </button>
-          <span className="text-sm px-3 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
-            {text.language}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm px-3 py-1 bg-blue-50 text-blue-700 rounded-full font-medium">
+              {text.language}
+            </span>
+            <span className="text-gray-400">→</span>
+            <select
+              value={targetLanguage}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              className="text-sm px-3 py-1 bg-green-50 text-green-700 rounded-full font-medium border-none cursor-pointer focus:ring-2 focus:ring-green-500"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 

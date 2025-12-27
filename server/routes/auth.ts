@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import pool from '../db.js';
-import { generateToken } from '../middleware/auth.js';
+import { generateToken, authenticateToken, AuthRequest } from '../middleware/auth.js';
 import { sendVerificationEmail, generateVerificationToken } from '../services/email.js';
 
 const router = Router();
@@ -112,6 +112,7 @@ router.post('/login', async (req: Request, res: Response) => {
         name: user.name,
         native_language: user.native_language,
         learning_language: user.learning_language,
+        target_language: user.target_language || 'English',
       },
     });
   } catch (error) {
@@ -190,6 +191,46 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
     res.json({ message: 'Verification email sent. Please check your inbox.' });
   } catch (error) {
     console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Update user preferences
+router.patch('/preferences', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const { target_language } = req.body;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+
+    if (!target_language || typeof target_language !== 'string') {
+      return res.status(400).json({ error: 'Target language is required' });
+    }
+
+    // Update user's target language
+    await pool.query(
+      'UPDATE users SET target_language = $1 WHERE id = $2',
+      [target_language, userId]
+    );
+
+    // Get updated user
+    const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
+    const user = result.rows[0];
+
+    res.json({
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        native_language: user.native_language,
+        learning_language: user.learning_language,
+        target_language: user.target_language,
+      },
+    });
+  } catch (error) {
+    console.error('Update preferences error:', error);
     res.status(500).json({ error: 'Server error' });
   }
 });
