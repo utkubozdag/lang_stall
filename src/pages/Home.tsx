@@ -13,6 +13,8 @@ export default function Home() {
   const [content, setContent] = useState('');
   const [language, setLanguage] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'paste' | 'file'>('paste');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   useEffect(() => {
     loadTexts();
@@ -32,17 +34,51 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await api.post('/texts', { title, content, language });
+      let response;
+
+      if (uploadMode === 'file' && selectedFile) {
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('title', title);
+        formData.append('language', language);
+
+        response = await api.post('/texts/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        response = await api.post('/texts', { title, content, language });
+      }
+
       setTexts([response.data, ...texts]);
       setTitle('');
       setContent('');
       setLanguage('');
+      setSelectedFile(null);
+      setUploadMode('paste');
       setShowNewText(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating text:', error);
-      alert('Failed to create text');
+      alert(error.response?.data?.error || 'Failed to create text');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const ext = file.name.toLowerCase();
+      if (!ext.endsWith('.txt') && !ext.endsWith('.epub')) {
+        alert('Only .txt and .epub files are allowed');
+        return;
+      }
+      setSelectedFile(file);
+      // Auto-fill title from filename if empty
+      if (!title) {
+        setTitle(file.name.replace(/\.(txt|epub)$/i, ''));
+      }
     }
   };
 
@@ -118,6 +154,33 @@ export default function Home() {
         {showNewText && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Add New Text</h3>
+
+            {/* Mode Toggle */}
+            <div className="flex gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setUploadMode('paste')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  uploadMode === 'paste'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Paste Text
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadMode('file')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  uploadMode === 'file'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Upload File
+              </button>
+            </div>
+
             <form onSubmit={handleCreateText} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -151,24 +214,62 @@ export default function Home() {
                 </div>
               </div>
 
-              <div>
-                <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                  Text Content
-                </label>
-                <textarea
-                  id="content"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  required
-                  rows={8}
-                  placeholder="Paste your text here..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                />
-              </div>
+              {uploadMode === 'paste' ? (
+                <div>
+                  <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
+                    Text Content
+                  </label>
+                  <textarea
+                    id="content"
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    required
+                    rows={8}
+                    placeholder="Paste your text here..."
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                  />
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload File (.txt or .epub)
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition">
+                    <input
+                      id="file"
+                      type="file"
+                      accept=".txt,.epub"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                    <label htmlFor="file" className="cursor-pointer">
+                      {selectedFile ? (
+                        <div className="text-gray-700">
+                          <svg className="w-8 h-8 mx-auto mb-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-medium">{selectedFile.name}</span>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {(selectedFile.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="text-gray-500">
+                          <svg className="w-10 h-10 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                          </svg>
+                          <span className="font-medium text-blue-600">Click to upload</span>
+                          <p className="text-sm mt-1">TXT or EPUB (max 5MB)</p>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"
-                disabled={loading}
+                disabled={loading || (uploadMode === 'file' && !selectedFile)}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition font-medium"
               >
                 {loading ? 'Creating...' : 'Create Text'}

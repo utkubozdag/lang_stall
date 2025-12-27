@@ -1,8 +1,99 @@
 import { Router, Response } from 'express';
 import { AuthRequest, authenticateToken } from '../middleware/auth.js';
 import pool from '../db.js';
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 const router = Router();
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ['text/plain', 'application/epub+zip'];
+    const allowedExtensions = ['.txt', '.epub'];
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    if (allowedTypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only .txt and .epub files are allowed'));
+    }
+  },
+});
+
+// Helper to parse epub content
+const parseEpub = async (buffer: Buffer): Promise<string> => {
+  // Write buffer to temp file (epub2 requires file path)
+  const tempPath = path.join(os.tmpdir(), `epub-${Date.now()}.epub`);
+  await fs.promises.writeFile(tempPath, buffer);
+
+  try {
+    // Dynamic import to handle epub2's async nature
+    const { EPub } = await import('epub2');
+
+    return new Promise((resolve, reject) => {
+      const epub = new EPub(tempPath);
+
+      epub.on('end', async () => {
+        const chapters: string[] = [];
+
+        // Process chapters sequentially
+        const processChapter = (index: number): Promise<void> => {
+          return new Promise((res) => {
+            if (index >= epub.flow.length) {
+              res();
+              return;
+            }
+
+            const chapter = epub.flow[index];
+            if (!chapter.id) {
+              processChapter(index + 1).then(res);
+              return;
+            }
+
+            epub.getChapter(chapter.id, (err: Error, content?: string) => {
+              if (!err && content) {
+                // Strip HTML tags and clean up
+                const text = content
+                  .replace(/<[^>]*>/g, ' ')
+                  .replace(/&nbsp;/g, ' ')
+                  .replace(/&amp;/g, '&')
+                  .replace(/&lt;/g, '<')
+                  .replace(/&gt;/g, '>')
+                  .replace(/&quot;/g, '"')
+                  .replace(/&#39;/g, "'")
+                  .replace(/\s+/g, ' ')
+                  .trim();
+                if (text) {
+                  chapters.push(text);
+                }
+              }
+              processChapter(index + 1).then(res);
+            });
+          });
+        };
+
+        await processChapter(0);
+        resolve(chapters.join('\n\n'));
+      });
+
+      epub.on('error', (err: Error) => {
+        reject(err);
+      });
+
+      epub.parse();
+    });
+  } finally {
+    // Clean up temp file
+    await fs.promises.unlink(tempPath).catch(() => {});
+  }
+};
 
 // Get all texts for a user
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -79,6 +170,64 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Create text error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Upload file (txt or epub)
+router.post('/upload', authenticateToken, upload.single('file'), async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const file = req.file;
+    const { title, language } = req.body;
+
+    if (!file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+
+    if (!title || !language) {
+      return res.status(400).json({ error: 'Title and language are required' });
+    }
+
+    if (title.length > 200) {
+      return res.status(400).json({ error: 'Title too long (max 200 characters)' });
+    }
+
+    if (language.length > 50) {
+      return res.status(400).json({ error: 'Language name too long' });
+    }
+
+    let content: string;
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    if (ext === '.txt') {
+      content = file.buffer.toString('utf-8');
+    } else if (ext === '.epub') {
+      content = await parseEpub(file.buffer);
+    } else {
+      return res.status(400).json({ error: 'Unsupported file type' });
+    }
+
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({ error: 'File is empty or could not be parsed' });
+    }
+
+    // Limit content length
+    if (content.length > 500000) {
+      content = content.substring(0, 500000);
+    }
+
+    const result = await pool.query(
+      'INSERT INTO texts (user_id, title, content, language) VALUES ($1, $2, $3, $4) RETURNING *',
+      [userId, title, content, language]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('Upload text error:', error);
+    if (error.message === 'Only .txt and .epub files are allowed') {
+      return res.status(400).json({ error: error.message });
+    }
     res.status(500).json({ error: 'Server error' });
   }
 });
