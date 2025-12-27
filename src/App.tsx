@@ -6,6 +6,7 @@ import Home from './pages/Home';
 import Reader from './pages/Reader';
 import Vocabulary from './pages/Vocabulary';
 import Flashcards from './pages/Flashcards';
+import Guide from './pages/Guide';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -85,6 +86,14 @@ function App() {
             element={
               <PrivateRoute>
                 <Flashcards />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/guide"
+            element={
+              <PrivateRoute>
+                <Guide />
               </PrivateRoute>
             }
           />
