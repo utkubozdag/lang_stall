@@ -40,6 +40,16 @@ export default function Reader() {
   const translateWord = async (word: string) => {
     if (!word || !text) return;
 
+    // Check cache first
+    const cacheKey = `translation:${text.language}:${word.toLowerCase()}`;
+    const cached = localStorage.getItem(cacheKey);
+
+    if (cached) {
+      setTranslation(cached);
+      setShowTranslation(true);
+      return;
+    }
+
     setLoading(true);
     setShowTranslation(false);
     try {
@@ -50,7 +60,12 @@ export default function Reader() {
         context: text.content.substring(0, 200),
       });
 
-      setTranslation(response.data.translation);
+      const translationResult = response.data.translation;
+
+      // Cache the translation
+      localStorage.setItem(cacheKey, translationResult);
+
+      setTranslation(translationResult);
       setShowTranslation(true);
     } catch (error) {
       console.error('Translation error:', error);
