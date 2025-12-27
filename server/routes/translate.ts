@@ -47,22 +47,22 @@ Keep the translation natural and accurate.`;
 Word: "${text}"
 Context: "${context}"
 
-IMPORTANT: Write your ENTIRE response in ${target}, including the explanation.
+Write your response in ${target}.
 
 Respond in this exact format (plain text only, no markdown):
-Meaning: [2-3 common translations in ${target}, separated by commas]
-Explanation: [one brief sentence in ${target} about usage in this context]`;
+Meaning: [the most accurate translation for this context]
+Explanation: [brief note about the word's grammar, tense, or nuance - e.g. "past tense, formal" or "colloquial expression"]`;
     } else {
       // For words/short phrases without context
       prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 
-IMPORTANT: Write your ENTIRE response in ${target}, including the explanation.
+Write your response in ${target}.
 
 Respond in this exact format (plain text only, no markdown):
-Meaning: [2-3 common translations in ${target}, separated by commas]
-Explanation: [one brief sentence in ${target} about common usage]`;
+Meaning: [1-2 common translations, separated by comma if multiple]
+Explanation: [brief note about the word's grammar or common usage - e.g. "verb, present tense" or "informal greeting"]`;
     }
 
     const response = await fetch(
