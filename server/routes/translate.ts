@@ -42,27 +42,27 @@ Translation: [your translation here]
 Keep the translation natural and accurate.`;
     } else if (context) {
       // For words/short phrases with context
-      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${target}.
+      prompt = `You are a translator. Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 Context: "${context}"
 
-Write your response in ${target}.
+CRITICAL: You MUST write EVERYTHING in ${target}. Do NOT use English at all.
 
-Respond in this exact format (plain text only, no markdown):
-Meaning: [the most accurate translation for this context]
-Explanation: [brief note about the word's grammar, tense, or nuance - e.g. "past tense, formal" or "colloquial expression"]`;
+Format (use ${target} language only):
+Meaning: [translation in ${target}]
+Explanation: [grammar note in ${target} - tense, formality, usage]`;
     } else {
       // For words/short phrases without context
-      prompt = `Translate this ${sourceLanguage || ''} word/phrase to ${target}.
+      prompt = `You are a translator. Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 
-Write your response in ${target}.
+CRITICAL: You MUST write EVERYTHING in ${target}. Do NOT use English at all.
 
-Respond in this exact format (plain text only, no markdown):
-Meaning: [1-2 common translations, separated by comma if multiple]
-Explanation: [brief note about the word's grammar or common usage - e.g. "verb, present tense" or "informal greeting"]`;
+Format (use ${target} language only):
+Meaning: [translation in ${target}]
+Explanation: [grammar note in ${target} - tense, formality, usage]`;
     }
 
     const response = await fetch(
