@@ -1,17 +1,25 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'Lang Stall <noreply@langstall.com>';
+
+// Create Yahoo SMTP transporter
+const transporter = nodemailer.createTransport({
+  host: 'smtp.mail.yahoo.com',
+  port: 465,
+  secure: true, // use SSL
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD,
+  },
+});
 
 export const sendVerificationEmail = async (email: string, token: string): Promise<boolean> => {
   const verificationUrl = `${APP_URL}/verify?token=${token}`;
 
   try {
-    await resend.emails.send({
-      from: FROM_EMAIL,
+    await transporter.sendMail({
+      from: `"Lang Stall" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: 'Verify your Lang Stall account',
       html: `
