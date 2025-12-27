@@ -53,14 +53,13 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-// Serve static files in production
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../dist')));
+// Serve static files
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
 
-  app.get('/{*path}', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  });
-}
+app.get('/{*path}', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 // Initialize database and start server
 const start = async () => {
