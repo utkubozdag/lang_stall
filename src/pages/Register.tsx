@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { Link } from 'react-router-dom';
+import api from '../services/api';
 
 export default function Register() {
   const [email, setEmail] = useState('');
@@ -10,8 +10,7 @@ export default function Register() {
   const [learningLanguage, setLearningLanguage] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
-  const navigate = useNavigate();
+  const [registered, setRegistered] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,14 +18,47 @@ export default function Register() {
     setLoading(true);
 
     try {
-      await register(email, password, name, nativeLanguage, learningLanguage);
-      navigate('/');
+      await api.post('/auth/register', {
+        email,
+        password,
+        name,
+        native_language: nativeLanguage,
+        learning_language: learningLanguage,
+      });
+      setRegistered(true);
     } catch (err: any) {
       setError(err.response?.data?.error || 'Registration failed');
     } finally {
       setLoading(false);
     }
   };
+
+  if (registered) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+        <div className="max-w-md w-full">
+          <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Check your email</h2>
+            <p className="text-gray-600 mb-6">
+              We've sent a verification link to <strong>{email}</strong>.
+              Click the link to verify your account.
+            </p>
+            <Link
+              to="/login"
+              className="inline-block bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition font-medium"
+            >
+              Go to Login
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4 py-8">

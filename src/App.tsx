@@ -7,6 +7,7 @@ import Reader from './pages/Reader';
 import Vocabulary from './pages/Vocabulary';
 import Flashcards from './pages/Flashcards';
 import Guide from './pages/Guide';
+import Verify from './pages/Verify';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -57,6 +58,7 @@ function App() {
               </PublicRoute>
             }
           />
+          <Route path="/verify" element={<Verify />} />
           <Route
             path="/"
             element={

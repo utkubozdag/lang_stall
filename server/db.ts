@@ -54,6 +54,20 @@ export const initDb = async () => {
       CREATE INDEX IF NOT EXISTS idx_vocabulary_next_review ON vocabulary(next_review);
       CREATE INDEX IF NOT EXISTS idx_texts_user_id ON texts(user_id);
     `);
+
+    // Add email verification columns if they don't exist
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verified') THEN
+          ALTER TABLE users ADD COLUMN verified BOOLEAN DEFAULT FALSE;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_token') THEN
+          ALTER TABLE users ADD COLUMN verification_token TEXT;
+        END IF;
+      END $$;
+    `);
+
     console.log('Database initialized');
   } finally {
     client.release();
