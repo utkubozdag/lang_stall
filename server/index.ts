@@ -18,6 +18,9 @@ dotenv.config();
 const app = express();
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
+// Trust proxy for Railway/production (needed for rate limiting behind reverse proxy)
+app.set('trust proxy', 1);
+
 // Rate limiting
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
