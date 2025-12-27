@@ -51,8 +51,18 @@ router.post('/register', async (req: Request, res: Response) => {
       [email, hashedPassword, name, native_language, learning_language, false, verificationToken]
     );
 
-    // Send verification email
-    await sendVerificationEmail(email, verificationToken);
+    // Send verification email in background (don't block response)
+    sendVerificationEmail(email, verificationToken)
+      .then((success) => {
+        if (success) {
+          console.log(`Verification email sent to ${email}`);
+        } else {
+          console.error(`Failed to send verification email to ${email}`);
+        }
+      })
+      .catch((error) => {
+        console.error(`Error sending verification email to ${email}:`, error);
+      });
 
     res.json({
       message: 'Registration successful. Please check your email to verify your account.',
