@@ -24,6 +24,14 @@ router.get('/', async (req: Request, res: Response) => {
     const costs = costsResult.rows[0]?.cost_usd || 0;
     const requestCount = costsResult.rows[0]?.request_count || 0;
 
+    // Get current month's donations
+    const donationsResult = await pool.query(
+      'SELECT COALESCE(SUM(amount), 0) as total_donations FROM donations WHERE month = $1',
+      [monthStart]
+    );
+
+    const donations = donationsResult.rows[0]?.total_donations || 0;
+
     // Ko-fi URL from environment variable (set in Railway)
     const kofiUrl = process.env.KOFI_URL || null;
 
@@ -31,6 +39,7 @@ router.get('/', async (req: Request, res: Response) => {
       month: monthStart,
       costs: parseFloat(costs.toString()),
       requestCount,
+      donations: parseFloat(donations.toString()),
       kofiUrl,
     });
   } catch (error) {

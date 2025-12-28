@@ -9,6 +9,7 @@ interface SustainabilityStats {
   month: string;
   costs: number;
   requestCount: number;
+  donations: number;
   kofiUrl: string | null;
 }
 
@@ -214,7 +215,9 @@ export default function Home() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-800">Support Lang Stall</h3>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  {stats.requestCount.toLocaleString()} translations this month {stats.costs > 0 && `($${stats.costs.toFixed(2)} in API costs)`}
+                  {stats.requestCount.toLocaleString()} translations this month
+                  {stats.costs > 0 && ` • $${stats.costs.toFixed(2)} in costs`}
+                  {stats.donations > 0 && ` • $${stats.donations.toFixed(2)} donated`}
                 </p>
               </div>
               <a

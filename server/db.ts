@@ -87,15 +87,39 @@ export const initDb = async () => {
 
       CREATE TABLE IF NOT EXISTS donations (
         id SERIAL PRIMARY KEY,
-        stripe_payment_id TEXT UNIQUE,
-        amount_usd DECIMAL(10, 2) NOT NULL,
-        donor_email TEXT,
+        kofi_transaction_id TEXT UNIQUE,
+        amount DECIMAL(10, 2) NOT NULL,
+        currency TEXT DEFAULT 'USD',
+        donation_type TEXT DEFAULT 'Donation',
         month DATE NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
 
       CREATE INDEX IF NOT EXISTS idx_api_costs_month ON api_costs(month);
       CREATE INDEX IF NOT EXISTS idx_donations_month ON donations(month);
+    `);
+
+    // Migrate donations table from Stripe to Ko-fi if needed
+    await client.query(`
+      DO $$
+      BEGIN
+        -- Add kofi_transaction_id if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='donations' AND column_name='kofi_transaction_id') THEN
+          ALTER TABLE donations ADD COLUMN kofi_transaction_id TEXT UNIQUE;
+        END IF;
+        -- Add currency if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='donations' AND column_name='currency') THEN
+          ALTER TABLE donations ADD COLUMN currency TEXT DEFAULT 'USD';
+        END IF;
+        -- Add donation_type if it doesn't exist
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='donations' AND column_name='donation_type') THEN
+          ALTER TABLE donations ADD COLUMN donation_type TEXT DEFAULT 'Donation';
+        END IF;
+        -- Rename amount_usd to amount if needed
+        IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='donations' AND column_name='amount_usd') THEN
+          ALTER TABLE donations RENAME COLUMN amount_usd TO amount;
+        END IF;
+      END $$;
     `);
 
     console.log('Database initialized');

@@ -10,6 +10,7 @@ import translateRoutes from './routes/translate.js';
 import vocabularyRoutes from './routes/vocabulary.js';
 import textsRoutes from './routes/texts.js';
 import statsRoutes from './routes/stats.js';
+import kofiRoutes from './routes/kofi.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -52,6 +53,7 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '1mb' })); // Limit body size
+app.use(express.urlencoded({ extended: true })); // For Ko-fi webhook (form-urlencoded)
 app.use(generalLimiter);
 
 // API Routes
@@ -60,6 +62,7 @@ app.use('/api/translate', translateLimiter, translateRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
 app.use('/api/texts', textsRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/kofi', kofiRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
