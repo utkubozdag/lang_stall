@@ -13,6 +13,17 @@ const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4);
 };
 
+// Sanitize markdown formatting from LLM output
+const sanitizeMarkdown = (text: string): string => {
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **bold**
+    .replace(/\*([^*]+)\*/g, '$1')       // Remove *italic*
+    .replace(/__([^_]+)__/g, '$1')       // Remove __bold__
+    .replace(/_([^_]+)_/g, '$1')         // Remove _italic_
+    .replace(/`([^`]+)`/g, '$1')         // Remove `code`
+    .trim();
+};
+
 // Log API cost to database
 const logApiCost = async (inputTokens: number, outputTokens: number): Promise<void> => {
   try {
@@ -92,7 +103,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     // Mnemonic instruction using StoryWeave method (only for short words/phrases)
     const mnemonicInstruction = generateMnemonic && !isLongText ? `
-Mnemonic: [Create ONE memorable sentence using ${target} words that sound like "${text}" AND logically relate to its meaning. Requirements: (1) Must create a vivid mental image you can visualize, (2) The story must make logical sense - no random word salad, (3) Sound-alike words should naturally fit the scene. Output ONLY the final sentence, nothing else.]` : '';
+Mnemonic: [Create ONE memorable sentence using ${target} words that sound like "${text}" AND logically relate to its meaning. Requirements: (1) Must create a vivid mental image you can visualize, (2) The story must make logical sense - no random word salad, (3) Sound-alike words should naturally fit the scene. Output ONLY the final sentence as plain text - no bold, italic, or any formatting.]` : '';
 
     if (isLongText) {
       // For sentences and passages - provide full translation
@@ -178,7 +189,7 @@ Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInst
     // Only capture mnemonic value when requested and not long text
     let mnemonic: string | undefined;
     if (generateMnemonic && !isLongText && mnemonicLine) {
-      mnemonic = mnemonicLine.substring('mnemonic:'.length).trim();
+      mnemonic = sanitizeMarkdown(mnemonicLine.substring('mnemonic:'.length));
     }
 
     // Log API cost (async, don't wait)
