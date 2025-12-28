@@ -90,9 +90,9 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const target = targetLanguage || 'English';
 
-    // Mnemonic instruction for Link and Story Method (only for short words/phrases)
+    // Mnemonic instruction using StoryWeave method (only for short words/phrases)
     const mnemonicInstruction = generateMnemonic && !isLongText ? `
-Mnemonic: [Create a memorable sentence using the Link and Story Method. Find a word in ${target} that sounds similar to "${text}" and create a short, vivid sentence connecting the sound-alike word to the meaning. Example: Spanish "gato" (cat) → "gate" → "The cat sat on the gate." Keep it simple and memorable.]` : '';
+Mnemonic: [Use the StoryWeave method: Find words in ${target} that sound like syllables of "${text}". Create ONE short, vivid sentence using those sound-alike words IN ORDER while connecting to the meaning. Example: "alleviate" (relieve) → "a leaf he ate" → "A leaf he ate to alleviate his hunger." Keep it brief - just one memorable sentence, no explanation.]` : '';
 
     if (isLongText) {
       // For sentences and passages - provide full translation
@@ -167,18 +167,18 @@ Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInst
 
     const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
 
-    // Parse mnemonic from response if requested
-    let translation = fullResponse;
-    let mnemonic: string | undefined;
+    // Always filter out mnemonic lines from translation (LLM may add them unprompted)
+    // But only return mnemonic value when generateMnemonic is true
+    const lines = fullResponse.split('\n');
+    const mnemonicLine = lines.find(line => line.toLowerCase().startsWith('mnemonic:'));
 
-    if (generateMnemonic && !isLongText) {
-      const lines = fullResponse.split('\n');
-      const mnemonicLine = lines.find(line => line.toLowerCase().startsWith('mnemonic:'));
-      if (mnemonicLine) {
-        mnemonic = mnemonicLine.substring('mnemonic:'.length).trim();
-        // Remove mnemonic line from translation
-        translation = lines.filter(line => !line.toLowerCase().startsWith('mnemonic:')).join('\n').trim();
-      }
+    // Always remove mnemonic lines from translation
+    const translation = lines.filter(line => !line.toLowerCase().startsWith('mnemonic:')).join('\n').trim();
+
+    // Only capture mnemonic value when requested and not long text
+    let mnemonic: string | undefined;
+    if (generateMnemonic && !isLongText && mnemonicLine) {
+      mnemonic = mnemonicLine.substring('mnemonic:'.length).trim();
     }
 
     // Log API cost (async, don't wait)
