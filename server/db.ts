@@ -71,6 +71,33 @@ export const initDb = async () => {
       END $$;
     `);
 
+    // Create sustainability tracking tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS api_costs (
+        id SERIAL PRIMARY KEY,
+        month DATE NOT NULL,
+        input_tokens INTEGER DEFAULT 0,
+        output_tokens INTEGER DEFAULT 0,
+        cost_usd DECIMAL(10, 6) DEFAULT 0,
+        request_count INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(month)
+      );
+
+      CREATE TABLE IF NOT EXISTS donations (
+        id SERIAL PRIMARY KEY,
+        stripe_payment_id TEXT UNIQUE,
+        amount_usd DECIMAL(10, 2) NOT NULL,
+        donor_email TEXT,
+        month DATE NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_api_costs_month ON api_costs(month);
+      CREATE INDEX IF NOT EXISTS idx_donations_month ON donations(month);
+    `);
+
     console.log('Database initialized');
   } finally {
     client.release();

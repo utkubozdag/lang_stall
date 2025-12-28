@@ -1,7 +1,44 @@
 import { Router, Response } from 'express';
 import { AuthRequest, authenticateToken } from '../middleware/auth.js';
+import pool from '../db.js';
 
 const router = Router();
+
+// Gemini 2.0 Flash pricing (per 1M tokens)
+const GEMINI_INPUT_PRICE = 0.10;  // $0.10 per 1M input tokens
+const GEMINI_OUTPUT_PRICE = 0.30; // $0.30 per 1M output tokens
+
+// Estimate tokens (roughly 4 characters per token)
+const estimateTokens = (text: string): number => {
+  return Math.ceil(text.length / 4);
+};
+
+// Log API cost to database
+const logApiCost = async (inputTokens: number, outputTokens: number): Promise<void> => {
+  try {
+    const cost = (inputTokens * GEMINI_INPUT_PRICE / 1_000_000) +
+                 (outputTokens * GEMINI_OUTPUT_PRICE / 1_000_000);
+
+    // Get first day of current month
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthStr = monthStart.toISOString().split('T')[0];
+
+    await pool.query(`
+      INSERT INTO api_costs (month, input_tokens, output_tokens, cost_usd, request_count)
+      VALUES ($1, $2, $3, $4, 1)
+      ON CONFLICT (month) DO UPDATE SET
+        input_tokens = api_costs.input_tokens + $2,
+        output_tokens = api_costs.output_tokens + $3,
+        cost_usd = api_costs.cost_usd + $4,
+        request_count = api_costs.request_count + 1,
+        updated_at = CURRENT_TIMESTAMP
+    `, [monthStr, inputTokens, outputTokens, cost]);
+  } catch (error) {
+    console.error('Failed to log API cost:', error);
+    // Don't throw - cost logging shouldn't break translations
+  }
+};
 
 // Translate word or phrase using Gemini
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
@@ -124,6 +161,11 @@ Explanation: [grammar note in ${target} - tense, formality, usage]`;
     }
 
     const translation = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
+
+    // Log API cost (async, don't wait)
+    const inputTokens = estimateTokens(prompt);
+    const outputTokens = estimateTokens(translation);
+    logApiCost(inputTokens, outputTokens);
 
     res.json({ translation });
   } catch (error) {

@@ -9,6 +9,7 @@ import authRoutes from './routes/auth.js';
 import translateRoutes from './routes/translate.js';
 import vocabularyRoutes from './routes/vocabulary.js';
 import textsRoutes from './routes/texts.js';
+import statsRoutes from './routes/stats.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,7 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/translate', translateLimiter, translateRoutes);
 app.use('/api/vocabulary', vocabularyRoutes);
 app.use('/api/texts', textsRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
