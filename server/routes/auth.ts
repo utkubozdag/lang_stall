@@ -51,10 +51,18 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Input too long' });
     }
 
-    // Check if user exists
-    const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    // Check if user exists - handle silently to prevent email enumeration
+    const existingUser = await pool.query('SELECT id, verified FROM users WHERE email = $1', [email]);
+
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'User already exists' });
+      // User exists - return same response to prevent enumeration
+      // Optionally, you could send an email saying "you already have an account"
+      console.log(`Registration attempt for existing email: ${email}`);
+      res.json({
+        message: 'Registration successful. Please check your email to verify your account.',
+        requiresVerification: true,
+      });
+      return;
     }
 
     // Hash password
@@ -65,7 +73,7 @@ router.post('/register', async (req: Request, res: Response) => {
     const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Create user with verification token
-    const result = await pool.query(
+    await pool.query(
       'INSERT INTO users (email, password, name, native_language, learning_language, verified, verification_token, verification_token_expires) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
       [email, hashedPassword, name, native_language, learning_language, false, verificationToken, tokenExpires]
     );

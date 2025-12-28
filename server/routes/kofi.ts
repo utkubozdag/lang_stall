@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import pool from '../db.js';
 
 const router = Router();
@@ -50,7 +51,11 @@ router.post('/webhook', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Webhook not configured' });
     }
 
-    if (payload.verification_token !== verificationToken) {
+    // Use timing-safe comparison to prevent timing attacks
+    const tokenBuffer = Buffer.from(payload.verification_token || '');
+    const expectedBuffer = Buffer.from(verificationToken);
+    if (tokenBuffer.length !== expectedBuffer.length ||
+        !crypto.timingSafeEqual(tokenBuffer, expectedBuffer)) {
       console.error('Ko-fi webhook: Invalid verification token');
       return res.status(401).json({ error: 'Invalid verification token' });
     }

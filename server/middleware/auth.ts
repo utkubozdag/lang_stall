@@ -23,7 +23,11 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { userId: number };
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
+    // Exclude password from query to prevent accidental exposure
+    const result = await pool.query(
+      'SELECT id, email, name, native_language, learning_language, target_language, verified FROM users WHERE id = $1',
+      [decoded.userId]
+    );
     const user = result.rows[0];
 
     if (!user) {

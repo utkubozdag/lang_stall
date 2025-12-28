@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
@@ -52,6 +53,21 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind uses inline styles
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https://generativelanguage.googleapis.com"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Allow loading external resources
+}));
 app.use(express.json({ limit: '1mb' })); // Limit body size
 app.use(express.urlencoded({ extended: true })); // For Ko-fi webhook (form-urlencoded)
 app.use(generalLimiter);
