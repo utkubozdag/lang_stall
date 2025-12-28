@@ -20,8 +20,9 @@ export default function Home() {
   const [content, setContent] = useState('');
   const [language, setLanguage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploadMode, setUploadMode] = useState<'paste' | 'file'>('paste');
+  const [uploadMode, setUploadMode] = useState<'paste' | 'file' | 'url'>('paste');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [urlInput, setUrlInput] = useState('');
   const [editingText, setEditingText] = useState<Text | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
@@ -70,6 +71,12 @@ export default function Home() {
             'Content-Type': 'multipart/form-data',
           },
         });
+      } else if (uploadMode === 'url') {
+        response = await api.post('/texts/from-url', {
+          url: urlInput,
+          title: title || undefined,
+          language,
+        });
       } else {
         response = await api.post('/texts', { title, content, language });
       }
@@ -79,6 +86,7 @@ export default function Home() {
       setContent('');
       setLanguage('');
       setSelectedFile(null);
+      setUrlInput('');
       setUploadMode('paste');
       setShowNewText(false);
     } catch (error: any) {
@@ -262,22 +270,33 @@ export default function Home() {
               >
                 Upload File
               </button>
+              <button
+                type="button"
+                onClick={() => setUploadMode('url')}
+                className={`px-4 py-2 rounded-lg font-medium transition ${
+                  uploadMode === 'url'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                From URL
+              </button>
             </div>
 
             <form onSubmit={handleCreateText} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                    Title
+                    Title {uploadMode === 'url' && <span className="text-gray-400 font-normal">(optional)</span>}
                   </label>
                   <input
                     id="title"
                     type="text"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    required
+                    required={uploadMode !== 'url'}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="My Hungarian Article"
+                    placeholder={uploadMode === 'url' ? 'Auto-detected from page' : 'My Hungarian Article'}
                   />
                 </div>
 
@@ -297,7 +316,7 @@ export default function Home() {
                 </div>
               </div>
 
-              {uploadMode === 'paste' ? (
+              {uploadMode === 'paste' && (
                 <div>
                   <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
                     Text Content
@@ -312,7 +331,9 @@ export default function Home() {
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                   />
                 </div>
-              ) : (
+              )}
+
+              {uploadMode === 'file' && (
                 <div>
                   <label htmlFor="file" className="block text-sm font-medium text-gray-700 mb-2">
                     Upload File (.txt or .epub)
@@ -350,9 +371,29 @@ export default function Home() {
                 </div>
               )}
 
+              {uploadMode === 'url' && (
+                <div>
+                  <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
+                    Page URL
+                  </label>
+                  <input
+                    id="url"
+                    type="url"
+                    value={urlInput}
+                    onChange={(e) => setUrlInput(e.target.value)}
+                    required
+                    placeholder="https://example.com/article"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    We'll extract the article content from the page
+                  </p>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={loading || (uploadMode === 'file' && !selectedFile)}
+                disabled={loading || (uploadMode === 'file' && !selectedFile) || (uploadMode === 'url' && !urlInput)}
                 className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-blue-400 transition font-medium"
               >
                 {loading ? 'Creating...' : 'Create Text'}

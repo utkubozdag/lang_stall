@@ -5,6 +5,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
+import * as cheerio from 'cheerio';
 
 const router = Router();
 
@@ -229,6 +230,112 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
       return res.status(400).json({ error: error.message });
     }
     res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Import from URL
+router.post('/from-url', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const { url, title, language } = req.body;
+
+    if (!url || !language) {
+      return res.status(400).json({ error: 'URL and language are required' });
+    }
+
+    // Validate URL
+    let parsedUrl: URL;
+    try {
+      parsedUrl = new URL(url);
+      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+        throw new Error('Invalid protocol');
+      }
+    } catch {
+      return res.status(400).json({ error: 'Invalid URL' });
+    }
+
+    if (title && title.length > 200) {
+      return res.status(400).json({ error: 'Title too long (max 200 characters)' });
+    }
+
+    if (language.length > 50) {
+      return res.status(400).json({ error: 'Language name too long' });
+    }
+
+    // Fetch the URL
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; LangStall/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+      },
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
+
+    if (!response.ok) {
+      return res.status(400).json({ error: `Failed to fetch URL: ${response.status}` });
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('text/html') && !contentType.includes('text/plain')) {
+      return res.status(400).json({ error: 'URL must point to an HTML or text page' });
+    }
+
+    const html = await response.text();
+
+    // Parse HTML and extract text
+    const $ = cheerio.load(html);
+
+    // Remove unwanted elements
+    $('script, style, nav, header, footer, aside, .ad, .ads, .advertisement, .sidebar, .menu, .navigation, .comments, .social, .share').remove();
+
+    // Try to find main content
+    let content = '';
+    const mainSelectors = ['article', 'main', '.content', '.post', '.article', '.entry-content', '#content', '.post-content'];
+
+    for (const selector of mainSelectors) {
+      const el = $(selector);
+      if (el.length && el.text().trim().length > 200) {
+        content = el.text();
+        break;
+      }
+    }
+
+    // Fallback to body
+    if (!content) {
+      content = $('body').text();
+    }
+
+    // Clean up whitespace
+    content = content
+      .replace(/\s+/g, ' ')
+      .replace(/\n\s*\n/g, '\n\n')
+      .trim();
+
+    if (!content || content.length < 50) {
+      return res.status(400).json({ error: 'Could not extract meaningful content from URL' });
+    }
+
+    // Limit content length
+    if (content.length > 500000) {
+      content = content.substring(0, 500000);
+    }
+
+    // Use provided title or extract from page
+    const pageTitle = title || $('title').text().trim() || $('h1').first().text().trim() || 'Imported from URL';
+    const finalTitle = pageTitle.substring(0, 200);
+
+    const result = await pool.query(
+      'INSERT INTO texts (user_id, title, content, language) VALUES ($1, $2, $3, $4) RETURNING *',
+      [userId, finalTitle, content, language]
+    );
+
+    res.json(result.rows[0]);
+  } catch (error: any) {
+    console.error('URL import error:', error);
+    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+      return res.status(400).json({ error: 'URL took too long to respond' });
+    }
+    res.status(500).json({ error: 'Failed to import from URL' });
   }
 });
 
