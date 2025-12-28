@@ -267,28 +267,30 @@ export default function Home() {
           <p className="text-gray-600">Continue your language learning journey</p>
         </div>
 
-        {/* Support Banner - subtle version */}
+        {/* Support Banner - only show if Ko-fi URL is configured */}
         {stats && stats.kofiUrl && (
-          <div className="mb-6 bg-gray-50 rounded-lg border border-gray-200 px-4 py-3 flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              <span className="font-medium text-gray-700">{stats.requestCount.toLocaleString()}</span> translations this month
-              {stats.costs > 0 && stats.donations > 0 && (
-                <span className="text-gray-400 ml-2">
-                  | ${stats.donations.toFixed(0)} of ${stats.costs.toFixed(0)} covered
-                </span>
-              )}
-            </p>
-            <a
-              href={stats.kofiUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-500 hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition flex items-center gap-1"
-            >
-              Support
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </a>
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800">Support Lang Stall</h3>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {stats.requestCount.toLocaleString()} translations this month
+                  {stats.costs > 0 && ` • $${stats.costs.toFixed(2)} in costs`}
+                  {stats.donations > 0 && ` • $${stats.donations.toFixed(2)} donated`}
+                </p>
+              </div>
+              <a
+                href={stats.kofiUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-4 py-2 bg-[#FF5E5B] text-white text-sm rounded-lg hover:bg-[#e54e4b] focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 transition font-medium shadow-sm"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/>
+                </svg>
+                Support on Ko-fi
+              </a>
+            </div>
           </div>
         )}
 
