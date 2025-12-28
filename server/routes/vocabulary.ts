@@ -113,6 +113,79 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
   }
 });
 
+// Export vocabulary as CSV
+router.get('/export', authenticateToken, async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user!.id;
+    const result = await pool.query(
+      'SELECT word, translation, context, language, created_at FROM vocabulary WHERE user_id = $1 ORDER BY created_at DESC',
+      [userId]
+    );
+
+    // Parse translation to extract meaning and explanation
+    const parseTranslation = (translation: string): { meaning: string; explanation: string } => {
+      const lines = translation.split('\n').map(l => l.trim()).filter(l => l);
+      let meaning = '';
+      let explanation = '';
+
+      for (const line of lines) {
+        if (line.toLowerCase().startsWith('meaning:')) {
+          meaning = line.substring('meaning:'.length).trim();
+        } else if (line.toLowerCase().startsWith('explanation:')) {
+          explanation = line.substring('explanation:'.length).trim();
+        } else if (line.toLowerCase().startsWith('translation:')) {
+          // For longer passages that use "Translation:" format
+          meaning = line.substring('translation:'.length).trim();
+        }
+      }
+
+      // If no structured format found, use the whole translation as meaning
+      if (!meaning && !explanation) {
+        meaning = translation.trim();
+      }
+
+      return { meaning, explanation };
+    };
+
+    // Escape CSV field (handle quotes and commas)
+    const escapeCSV = (field: string): string => {
+      if (!field) return '';
+      // If field contains comma, newline, or quote, wrap in quotes and escape internal quotes
+      if (field.includes(',') || field.includes('\n') || field.includes('"')) {
+        return '"' + field.replace(/"/g, '""') + '"';
+      }
+      return field;
+    };
+
+    // Build CSV content
+    const headers = ['word', 'meaning', 'explanation', 'context', 'language', 'created_at'];
+    const csvRows = [headers.join(',')];
+
+    for (const row of result.rows) {
+      const { meaning, explanation } = parseTranslation(row.translation);
+      const csvRow = [
+        escapeCSV(row.word),
+        escapeCSV(meaning),
+        escapeCSV(explanation),
+        escapeCSV(row.context || ''),
+        escapeCSV(row.language),
+        escapeCSV(new Date(row.created_at).toISOString().split('T')[0]),
+      ];
+      csvRows.push(csvRow.join(','));
+    }
+
+    const csvContent = csvRows.join('\n');
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=vocabulary-export.csv');
+    res.send(csvContent);
+  } catch (error) {
+    console.error('Export vocabulary error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Review vocabulary (spaced repetition)
 router.post('/:id/review', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
