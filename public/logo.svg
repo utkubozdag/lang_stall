@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- Roof -->
+  <path d="M10 35 L50 15 L90 35 L85 40 L50 22 L15 40 Z" fill="#5B9A9A"/>
+  <path d="M15 40 L50 22 L85 40 L80 45 L50 28 L20 45 Z" fill="#4A8585"/>
+  <!-- Roof ridges -->
+  <line x1="30" y1="32" x2="35" y2="42" stroke="#3D7070" stroke-width="1.5"/>
+  <line x1="50" y1="22" x2="50" y2="35" stroke="#3D7070" stroke-width="1.5"/>
+  <line x1="70" y1="32" x2="65" y2="42" stroke="#3D7070" stroke-width="1.5"/>
+  <!-- Stall body -->
+  <rect x="25" y="45" width="50" height="35" fill="#E8E4DF" stroke="#B8B4AF" stroke-width="1.5"/>
+  <!-- Counter top -->
+  <rect x="22" y="45" width="56" height="6" fill="#D4CFC8" stroke="#B8B4AF" stroke-width="1"/>
+  <!-- Counter front panel -->
+  <rect x="30" y="55" width="40" height="20" fill="#F5F2EE" stroke="#C8C4BF" stroke-width="1"/>
+  <!-- Support poles -->
+  <rect x="23" y="40" width="4" height="40" fill="#8B8580"/>
+  <rect x="73" y="40" width="4" height="40" fill="#8B8580"/>
+</svg>

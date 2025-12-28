@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import Logo from '../components/Logo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -28,9 +29,9 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Lang Stall</h1>
-          <p className="text-gray-600">Learn languages by reading</p>
+        <div className="flex flex-col items-center mb-8">
+          <Logo size="lg" />
+          <p className="text-gray-600 mt-2">Learn languages by reading</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8">
