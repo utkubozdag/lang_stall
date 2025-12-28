@@ -15,18 +15,27 @@ export default function Reader() {
   const [selectedText, setSelectedText] = useState('');
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
   const [translation, setTranslation] = useState('');
+  const [mnemonic, setMnemonic] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const [firstWordIndex, setFirstWordIndex] = useState<number | null>(null);
   const [targetLanguage, setTargetLanguage] = useState(user?.target_language || 'English');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [mnemonicEnabled, setMnemonicEnabled] = useState(() => {
+    const saved = localStorage.getItem('mnemonicEnabled');
+    return saved === 'true';
+  });
 
   useEffect(() => {
     if (id) {
       loadText();
     }
   }, [id]);
+
+  useEffect(() => {
+    localStorage.setItem('mnemonicEnabled', String(mnemonicEnabled));
+  }, [mnemonicEnabled]);
 
   const loadText = async () => {
     try {
@@ -43,7 +52,7 @@ export default function Reader() {
 
   const CACHE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
-  const getCachedTranslation = (cacheKey: string): string | null => {
+  const getCachedTranslation = (cacheKey: string): { translation: string; mnemonic?: string } | null => {
     try {
       const cached = localStorage.getItem(cacheKey);
       if (!cached) return null;
@@ -53,17 +62,18 @@ export default function Reader() {
         localStorage.removeItem(cacheKey);
         return null;
       }
-      return parsed.translation || null;
+      return parsed.translation ? { translation: parsed.translation, mnemonic: parsed.mnemonic } : null;
     } catch {
       localStorage.removeItem(cacheKey);
       return null;
     }
   };
 
-  const setCachedTranslation = (cacheKey: string, translation: string) => {
+  const setCachedTranslation = (cacheKey: string, translation: string, mnemonic?: string) => {
     try {
       localStorage.setItem(cacheKey, JSON.stringify({
         translation,
+        mnemonic,
         timestamp: Date.now(),
       }));
     } catch {
@@ -74,28 +84,33 @@ export default function Reader() {
   const translateWord = async (word: string) => {
     if (!word || !text) return;
 
-    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}`;
+    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}:${mnemonicEnabled ? 'mnemonic' : 'no-mnemonic'}`;
     const cached = getCachedTranslation(cacheKey);
 
     if (cached) {
-      setTranslation(cached);
+      setTranslation(cached.translation);
+      setMnemonic(cached.mnemonic || '');
       setShowTranslation(true);
       return;
     }
 
     setLoading(true);
     setShowTranslation(false);
+    setMnemonic('');
     try {
       const response = await api.post('/translate', {
         text: word,
         sourceLanguage: text.language,
         targetLanguage: targetLanguage,
         context: text.content.substring(0, 200),
+        generateMnemonic: mnemonicEnabled,
       });
 
       const translationResult = response.data.translation;
-      setCachedTranslation(cacheKey, translationResult);
+      const mnemonicResult = response.data.mnemonic || '';
+      setCachedTranslation(cacheKey, translationResult, mnemonicResult);
       setTranslation(translationResult);
+      setMnemonic(mnemonicResult);
       setShowTranslation(true);
     } catch (error) {
       console.error('Translation error:', error);
@@ -116,6 +131,7 @@ export default function Reader() {
     if (selectedText) {
       setShowTranslation(false);
       setTranslation('');
+      setMnemonic('');
     }
   };
 
@@ -161,6 +177,7 @@ export default function Reader() {
         translation,
         context: getContext(),
         language: text.language,
+        mnemonic: mnemonic || undefined,
       });
       setToast({ message: `"${selectedText}" saved to vocabulary`, type: 'success' });
     } catch (error: any) {
@@ -179,6 +196,7 @@ export default function Reader() {
     setSelectedText('');
     setShowTranslation(false);
     setTranslation('');
+    setMnemonic('');
     setFirstWordIndex(null);
   };
 
@@ -236,7 +254,23 @@ export default function Reader() {
 
       {/* Reading Area */}
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 pb-48">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6">{text.title}</h1>
+        <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{text.title}</h1>
+          <button
+            onClick={() => setMnemonicEnabled(!mnemonicEnabled)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
+              mnemonicEnabled
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+            title="Link and Story Method - Generate memory aids for words"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <span className="hidden sm:inline">Mnemonic</span>
+          </button>
+        </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 md:p-10">
           <p className="text-base sm:text-lg leading-relaxed text-gray-800" style={{ lineHeight: '2' }}>
@@ -310,6 +344,16 @@ export default function Reader() {
                 <div className="bg-gray-50 rounded-lg p-4">
                   <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-sm sm:text-base">{translation}</p>
                 </div>
+                {mnemonic && (
+                  <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">
+                    <div className="flex items-start gap-2">
+                      <svg className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                      </svg>
+                      <p className="text-purple-800 text-sm leading-relaxed">{mnemonic}</p>
+                    </div>
+                  </div>
+                )}
                 <div className="flex gap-2">
                   <button
                     onClick={handleSaveVocabulary}

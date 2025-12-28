@@ -10,6 +10,7 @@ export default function Flashcards() {
   const [dueCards, setDueCards] = useState<Vocabulary[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showMnemonic, setShowMnemonic] = useState(false);
   const [loading, setLoading] = useState(true);
   const [reviewing, setReviewing] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -70,6 +71,7 @@ export default function Flashcards() {
       if (currentIndex < dueCards.length - 1) {
         setCurrentIndex(currentIndex + 1);
         setShowAnswer(false);
+        setShowMnemonic(false);
       } else {
         setDueCards([]);
         setCurrentIndex(0);
@@ -174,11 +176,31 @@ export default function Flashcards() {
                     </span>
                   </div>
                   <h2 className="text-2xl sm:text-4xl font-bold text-gray-900 mb-6">{currentCard.word}</h2>
-                  <div className="bg-gray-50 rounded-xl p-6 sm:p-8 mb-8 max-w-2xl mx-auto">
+                  <div className="bg-gray-50 rounded-xl p-6 sm:p-8 mb-4 max-w-2xl mx-auto">
                     <p className="text-lg sm:text-xl text-gray-800 whitespace-pre-wrap leading-relaxed">
                       {currentCard.translation}
                     </p>
                   </div>
+
+                  {/* Mnemonic Section */}
+                  {currentCard.mnemonic && (
+                    <div className="mb-8 max-w-2xl mx-auto">
+                      <button
+                        onClick={() => setShowMnemonic(!showMnemonic)}
+                        className="flex items-center gap-1.5 mx-auto px-3 py-1.5 text-sm text-purple-600 hover:text-purple-700 transition"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                        </svg>
+                        {showMnemonic ? 'Hide' : 'Show'} Memory Aid
+                      </button>
+                      {showMnemonic && (
+                        <div className="mt-3 bg-purple-50 rounded-lg p-4 border border-purple-100">
+                          <p className="text-purple-800 text-sm leading-relaxed">{currentCard.mnemonic}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   <div className="text-center">
                     <p className="text-sm text-gray-500 mb-4">How well did you remember?</p>

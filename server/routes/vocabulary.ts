@@ -40,7 +40,7 @@ router.get('/due', authenticateToken, async (req: AuthRequest, res: Response) =>
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
-    const { word, translation, context, language } = req.body;
+    const { word, translation, context, language, mnemonic } = req.body;
 
     if (!word || !translation || !language) {
       return res.status(400).json({ error: 'Word, translation, and language are required' });
@@ -63,6 +63,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Language name too long' });
     }
 
+    if (mnemonic && mnemonic.length > 500) {
+      return res.status(400).json({ error: 'Mnemonic too long' });
+    }
+
     // Check if word already exists for this user
     const existing = await pool.query(
       'SELECT * FROM vocabulary WHERE user_id = $1 AND word = $2 AND language = $3',
@@ -74,8 +78,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     }
 
     const result = await pool.query(
-      'INSERT INTO vocabulary (user_id, word, translation, context, language) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [userId, word, translation, context, language]
+      'INSERT INTO vocabulary (user_id, word, translation, context, language, mnemonic) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+      [userId, word, translation, context, language, mnemonic || null]
     );
 
     res.json(result.rows[0]);
@@ -118,7 +122,7 @@ router.get('/export', authenticateToken, async (req: AuthRequest, res: Response)
   try {
     const userId = req.user!.id;
     const result = await pool.query(
-      'SELECT word, translation, context, language, created_at FROM vocabulary WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT word, translation, context, language, mnemonic, created_at FROM vocabulary WHERE user_id = $1 ORDER BY created_at DESC',
       [userId]
     );
 
@@ -158,7 +162,7 @@ router.get('/export', authenticateToken, async (req: AuthRequest, res: Response)
     };
 
     // Build CSV content
-    const headers = ['word', 'meaning', 'explanation', 'context', 'language', 'created_at'];
+    const headers = ['word', 'meaning', 'explanation', 'mnemonic', 'context', 'language', 'created_at'];
     const csvRows = [headers.join(',')];
 
     for (const row of result.rows) {
@@ -167,6 +171,7 @@ router.get('/export', authenticateToken, async (req: AuthRequest, res: Response)
         escapeCSV(row.word),
         escapeCSV(meaning),
         escapeCSV(explanation),
+        escapeCSV(row.mnemonic || ''),
         escapeCSV(row.context || ''),
         escapeCSV(row.language),
         escapeCSV(new Date(row.created_at).toISOString().split('T')[0]),

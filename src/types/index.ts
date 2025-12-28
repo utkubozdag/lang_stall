@@ -22,6 +22,7 @@ export interface Vocabulary {
   word: string;
   translation: string;
   context?: string;
+  mnemonic?: string;
   language: string;
   next_review: string;
   interval: number;

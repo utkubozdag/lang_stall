@@ -95,6 +95,16 @@ export const initDb = async () => {
       END $$;
     `);
 
+    // Add mnemonic column to vocabulary table for Link and Story Method
+    await client.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='vocabulary' AND column_name='mnemonic') THEN
+          ALTER TABLE vocabulary ADD COLUMN mnemonic TEXT;
+        END IF;
+      END $$;
+    `);
+
     // Create sustainability tracking tables
     await client.query(`
       CREATE TABLE IF NOT EXISTS api_costs (

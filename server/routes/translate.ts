@@ -43,7 +43,7 @@ const logApiCost = async (inputTokens: number, outputTokens: number): Promise<vo
 // Translate word or phrase using Gemini
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { text, context, targetLanguage, sourceLanguage } = req.body;
+    const { text, context, targetLanguage, sourceLanguage, generateMnemonic } = req.body;
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -90,6 +90,10 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const target = targetLanguage || 'English';
 
+    // Mnemonic instruction for Link and Story Method (only for short words/phrases)
+    const mnemonicInstruction = generateMnemonic && !isLongText ? `
+Mnemonic: [Create a memorable sentence using the Link and Story Method. Find a word in ${target} that sounds similar to "${text}" and create a short, vivid sentence connecting the sound-alike word to the meaning. Example: Spanish "gato" (cat) → "gate" → "The cat sat on the gate." Keep it simple and memorable.]` : '';
+
     if (isLongText) {
       // For sentences and passages - provide full translation
       prompt = `Translate this ${sourceLanguage || ''} text to ${target}.
@@ -107,22 +111,22 @@ Keep the translation natural and accurate.`;
 Word: "${text}"
 Context: "${context}"
 
-CRITICAL: You MUST write EVERYTHING in ${target}. Do NOT use English at all.
+CRITICAL: You MUST write EVERYTHING in ${target} (except for the Mnemonic which should be in ${target} but can reference the original word sound).
 
 Format (use ${target} language only):
 Meaning: [translation in ${target}]
-Explanation: [grammar note in ${target} - tense, formality, usage]`;
+Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInstruction}`;
     } else {
       // For words/short phrases without context
       prompt = `You are a translator. Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 
-CRITICAL: You MUST write EVERYTHING in ${target}. Do NOT use English at all.
+CRITICAL: You MUST write EVERYTHING in ${target} (except for the Mnemonic which should be in ${target} but can reference the original word sound).
 
 Format (use ${target} language only):
 Meaning: [translation in ${target}]
-Explanation: [grammar note in ${target} - tense, formality, usage]`;
+Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInstruction}`;
     }
 
     const response = await fetch(
@@ -161,14 +165,28 @@ Explanation: [grammar note in ${target} - tense, formality, usage]`;
       return res.status(500).json({ error: 'Translation failed' });
     }
 
-    const translation = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
+    const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
+
+    // Parse mnemonic from response if requested
+    let translation = fullResponse;
+    let mnemonic: string | undefined;
+
+    if (generateMnemonic && !isLongText) {
+      const lines = fullResponse.split('\n');
+      const mnemonicLine = lines.find(line => line.toLowerCase().startsWith('mnemonic:'));
+      if (mnemonicLine) {
+        mnemonic = mnemonicLine.substring('mnemonic:'.length).trim();
+        // Remove mnemonic line from translation
+        translation = lines.filter(line => !line.toLowerCase().startsWith('mnemonic:')).join('\n').trim();
+      }
+    }
 
     // Log API cost (async, don't wait)
     const inputTokens = estimateTokens(prompt);
-    const outputTokens = estimateTokens(translation);
+    const outputTokens = estimateTokens(fullResponse);
     logApiCost(inputTokens, outputTokens);
 
-    res.json({ translation });
+    res.json({ translation, mnemonic });
   } catch (error) {
     console.error('Translation error:', error);
     res.status(500).json({ error: 'Server error' });
