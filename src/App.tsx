@@ -8,6 +8,7 @@ import Vocabulary from './pages/Vocabulary';
 import Flashcards from './pages/Flashcards';
 import Guide from './pages/Guide';
 import Verify from './pages/Verify';
+import About from './pages/About';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -59,6 +60,7 @@ function App() {
             }
           />
           <Route path="/verify" element={<Verify />} />
+          <Route path="/about" element={<About />} />
           <Route
             path="/"
             element={

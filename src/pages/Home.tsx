@@ -189,6 +189,12 @@ export default function Home() {
                 Practice
               </button>
               <button
+                onClick={() => navigate('/about')}
+                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900 font-medium transition"
+              >
+                About
+              </button>
+              <button
                 onClick={logout}
                 className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700 transition"
               >
