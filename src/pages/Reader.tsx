@@ -19,7 +19,6 @@ export default function Reader() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
-  const [firstWordIndex, setFirstWordIndex] = useState<number | null>(null);
   const [targetLanguage, setTargetLanguage] = useState(user?.target_language || 'English');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [mnemonicEnabled, setMnemonicEnabled] = useState(() => {
@@ -81,10 +80,12 @@ export default function Reader() {
     }
   };
 
-  const translateWord = async (word: string) => {
+  const translateWord = async (word: string, allowMnemonic: boolean = true) => {
     if (!word || !text) return;
 
-    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}:${mnemonicEnabled ? 'mnemonic' : 'no-mnemonic'}`;
+    // Only generate mnemonic for single words when enabled
+    const shouldGenerateMnemonic = mnemonicEnabled && allowMnemonic;
+    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}:${shouldGenerateMnemonic ? 'mnemonic' : 'no-mnemonic'}`;
     const cached = getCachedTranslation(cacheKey);
 
     if (cached) {
@@ -103,7 +104,7 @@ export default function Reader() {
         sourceLanguage: text.language,
         targetLanguage: targetLanguage,
         context: text.content.substring(0, 200),
-        generateMnemonic: mnemonicEnabled,
+        generateMnemonic: shouldGenerateMnemonic,
       });
 
       const translationResult = response.data.translation;
@@ -138,32 +139,57 @@ export default function Reader() {
   const handleWordClick = (index: number, word: string) => {
     if (!word.trim() || !text) return;
 
-    if (firstWordIndex !== null && firstWordIndex !== index) {
-      const start = Math.min(firstWordIndex, index);
-      const end = Math.max(firstWordIndex, index);
-      const words = getWords(text.content);
+    const words = getWords(text.content);
+
+    // If clicking on a selected word, deselect all
+    if (selectedWords.includes(index)) {
+      clearSelection();
+      return;
+    }
+
+    // If no selection, start new selection with this word
+    if (selectedWords.length === 0) {
+      setSelectedWords([index]);
+      setSelectedText(word.trim());
+      translateWord(word.trim(), true); // Single word, allow mnemonic
+      return;
+    }
+
+    // Check if this word is adjacent to the current selection
+    const minSelected = Math.min(...selectedWords);
+    const maxSelected = Math.max(...selectedWords);
+
+    // Find the actual word indices (skip whitespace)
+    const isAdjacentBefore = index < minSelected &&
+      !words.slice(index + 1, minSelected).some(w => w.trim());
+    const isAdjacentAfter = index > maxSelected &&
+      !words.slice(maxSelected + 1, index).some(w => w.trim());
+
+    if (isAdjacentBefore || isAdjacentAfter) {
+      // Add to selection
+      const newStart = isAdjacentBefore ? index : minSelected;
+      const newEnd = isAdjacentAfter ? index : maxSelected;
+
       const range: number[] = [];
-      for (let i = start; i <= end; i++) {
+      for (let i = newStart; i <= newEnd; i++) {
         range.push(i);
       }
 
       const selectedWordCount = range.filter(i => words[i]?.trim()).length;
       if (selectedWordCount > 15) {
         setToast({ message: 'Please select at most 15 words', type: 'error' });
-        setFirstWordIndex(null);
         return;
       }
 
       setSelectedWords(range);
-      const phrase = words.slice(start, end + 1).join('').trim();
+      const phrase = words.slice(newStart, newEnd + 1).join('').trim();
       setSelectedText(phrase);
-      setFirstWordIndex(null);
-      translateWord(phrase);
+      translateWord(phrase, false); // Multiple words, no mnemonic
     } else {
+      // Non-adjacent word, start new selection
       setSelectedWords([index]);
       setSelectedText(word.trim());
-      setFirstWordIndex(index);
-      translateWord(word.trim());
+      translateWord(word.trim(), true); // Single word, allow mnemonic
     }
   };
 
@@ -197,7 +223,6 @@ export default function Reader() {
     setShowTranslation(false);
     setTranslation('');
     setMnemonic('');
-    setFirstWordIndex(null);
   };
 
   const getContext = () => {
@@ -277,7 +302,6 @@ export default function Reader() {
             {words.map((word, index) => {
               const isWhitespace = !word.trim();
               const isSelected = selectedWords.includes(index);
-              const isFirstWord = firstWordIndex === index;
 
               if (isWhitespace) {
                 return <span key={index}>{word}</span>;
@@ -290,9 +314,7 @@ export default function Reader() {
                   className={`cursor-pointer rounded px-0.5 transition-colors select-none ${
                     isSelected
                       ? 'bg-blue-200 text-blue-900'
-                      : isFirstWord
-                        ? 'bg-yellow-200 text-yellow-900'
-                        : 'hover:bg-gray-100 active:bg-blue-100'
+                      : 'hover:bg-gray-100 active:bg-blue-100'
                   }`}
                 >
                   {word}
@@ -302,9 +324,9 @@ export default function Reader() {
           </p>
 
           <p className="text-xs sm:text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100">
-            {firstWordIndex !== null
-              ? 'Click another word to select a phrase'
-              : 'Click a word to translate'}
+            {selectedWords.length > 0
+              ? 'Click adjacent word to extend phrase, or click selected word to deselect'
+              : 'Click a word to translate, click more adjacent words for phrases'}
           </p>
         </div>
       </div>

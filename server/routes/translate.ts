@@ -16,11 +16,12 @@ const estimateTokens = (text: string): number => {
 // Sanitize markdown formatting from LLM output
 const sanitizeMarkdown = (text: string): string => {
   return text
-    .replace(/\*\*([^*]+)\*\*/g, '$1')  // Remove **bold**
-    .replace(/\*([^*]+)\*/g, '$1')       // Remove *italic*
-    .replace(/__([^_]+)__/g, '$1')       // Remove __bold__
-    .replace(/_([^_]+)_/g, '$1')         // Remove _italic_
-    .replace(/`([^`]+)`/g, '$1')         // Remove `code`
+    .replace(/\*\*/g, '')      // Remove all ** (bold markers)
+    .replace(/(?<!\w)\*(?!\w)/g, '')  // Remove standalone * (italic markers)
+    .replace(/__/g, '')        // Remove all __ (bold markers)
+    .replace(/(?<!\w)_(?!\w)/g, '')   // Remove standalone _ (italic markers)
+    .replace(/`/g, '')         // Remove all ` (code markers)
+    .replace(/\s+/g, ' ')      // Normalize whitespace
     .trim();
 };
 
