@@ -92,7 +92,7 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     // Mnemonic instruction using StoryWeave method (only for short words/phrases)
     const mnemonicInstruction = generateMnemonic && !isLongText ? `
-Mnemonic: [Memory aid: Find ${target} words that SOUND LIKE "${text}" and create ONE short sentence connecting those sounds to the meaning. Output ONLY the sentence itself - no explanation, no phonetic breakdown, no arrows or steps. Good examples: "The gear wrecked by egg-throwing children." (for gyerekek=children), "A leaf he ate cured his pain." (for alleviate=relieve)]` : '';
+Mnemonic: [Create ONE memorable sentence using ${target} words that sound like "${text}" AND logically relate to its meaning. Requirements: (1) Must create a vivid mental image you can visualize, (2) The story must make logical sense - no random word salad, (3) Sound-alike words should naturally fit the scene. Output ONLY the final sentence, nothing else.]` : '';
 
     if (isLongText) {
       // For sentences and passages - provide full translation
