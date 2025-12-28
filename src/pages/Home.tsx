@@ -4,13 +4,11 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { Text } from '../types';
 
-// Ko-fi page URL - update this with your Ko-fi username
-const KOFI_URL = 'https://ko-fi.com/langstall';
-
 interface SustainabilityStats {
   month: string;
   costs: number;
   requestCount: number;
+  kofiUrl: string | null;
 }
 
 export default function Home() {
@@ -200,18 +198,18 @@ export default function Home() {
           <p className="text-gray-600">Continue your language learning journey</p>
         </div>
 
-        {/* Support Banner */}
-        {stats && stats.costs > 0 && (
+        {/* Support Banner - only show if Ko-fi URL is configured */}
+        {stats && stats.kofiUrl && (
           <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-semibold text-gray-800">Support Lang Stall</h3>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  {stats.requestCount.toLocaleString()} translations this month (${stats.costs.toFixed(2)} in API costs)
+                  {stats.requestCount.toLocaleString()} translations this month {stats.costs > 0 && `($${stats.costs.toFixed(2)} in API costs)`}
                 </p>
               </div>
               <a
-                href={KOFI_URL}
+                href={stats.kofiUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-2 bg-[#FF5E5B] text-white text-sm rounded-lg hover:bg-[#e54e4b] transition font-medium shadow-sm"
