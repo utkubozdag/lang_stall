@@ -22,7 +22,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { userId: number };
     const result = await pool.query('SELECT * FROM users WHERE id = $1', [decoded.userId]);
     const user = result.rows[0];
 
@@ -38,5 +38,5 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
 };
 
 export const generateToken = (userId: number): string => {
-  return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
+  return jwt.sign({ userId }, JWT_SECRET, { algorithm: 'HS256', expiresIn: '7d' });
 };

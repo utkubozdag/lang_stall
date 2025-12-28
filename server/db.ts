@@ -1,8 +1,29 @@
 import { Pool } from 'pg';
 
+// Configure SSL for database connection
+// In production, prefer proper SSL validation. rejectUnauthorized: false is used
+// as a fallback for managed databases with self-signed certs (Railway, Heroku, etc.)
+const getSslConfig = () => {
+  if (process.env.NODE_ENV !== 'production') {
+    return false;
+  }
+
+  // If a CA certificate is provided, use it for proper validation
+  if (process.env.DATABASE_CA_CERT) {
+    return {
+      rejectUnauthorized: true,
+      ca: process.env.DATABASE_CA_CERT,
+    };
+  }
+
+  // Fallback for managed databases with self-signed certs
+  // Note: This disables certificate validation - only use with trusted providers
+  return { rejectUnauthorized: false };
+};
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: getSslConfig(),
 });
 
 // Initialize database tables
@@ -64,6 +85,9 @@ export const initDb = async () => {
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_token') THEN
           ALTER TABLE users ADD COLUMN verification_token TEXT;
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='verification_token_expires') THEN
+          ALTER TABLE users ADD COLUMN verification_token_expires TIMESTAMP;
         END IF;
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='target_language') THEN
           ALTER TABLE users ADD COLUMN target_language TEXT DEFAULT 'English';

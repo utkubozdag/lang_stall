@@ -6,6 +6,67 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import * as cheerio from 'cheerio';
+import dns from 'dns';
+import { promisify } from 'util';
+
+const dnsLookup = promisify(dns.lookup);
+
+// SSRF Protection: Check if IP is private/internal
+const isPrivateIP = (ip: string): boolean => {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) {
+    // Check for IPv6 loopback
+    return ip === '::1' || ip.startsWith('fe80:') || ip.startsWith('fc') || ip.startsWith('fd');
+  }
+
+  // 10.0.0.0/8
+  if (parts[0] === 10) return true;
+  // 172.16.0.0/12
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  // 192.168.0.0/16
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  // 127.0.0.0/8 (loopback)
+  if (parts[0] === 127) return true;
+  // 169.254.0.0/16 (link-local, includes cloud metadata)
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  // 0.0.0.0
+  if (parts.every(p => p === 0)) return true;
+
+  return false;
+};
+
+// Validate URL is safe to fetch (SSRF protection)
+const isUrlSafe = async (urlString: string): Promise<{ safe: boolean; error?: string }> => {
+  try {
+    const url = new URL(urlString);
+
+    // Only allow http and https
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      return { safe: false, error: 'Only HTTP and HTTPS URLs are allowed' };
+    }
+
+    // Block common internal hostnames
+    const blockedHosts = ['localhost', 'internal', 'intranet', 'corp', 'local'];
+    const hostname = url.hostname.toLowerCase();
+    if (blockedHosts.some(h => hostname === h || hostname.endsWith('.' + h))) {
+      return { safe: false, error: 'Internal hostnames are not allowed' };
+    }
+
+    // Resolve hostname to IP and check if private
+    try {
+      const { address } = await dnsLookup(url.hostname);
+      if (isPrivateIP(address)) {
+        return { safe: false, error: 'URLs pointing to private/internal networks are not allowed' };
+      }
+    } catch {
+      return { safe: false, error: 'Could not resolve hostname' };
+    }
+
+    return { safe: true };
+  } catch {
+    return { safe: false, error: 'Invalid URL format' };
+  }
+};
 
 const router = Router();
 
@@ -150,6 +211,11 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Title, content, and language are required' });
     }
 
+    // Type validation
+    if (typeof title !== 'string' || typeof content !== 'string' || typeof language !== 'string') {
+      return res.status(400).json({ error: 'Invalid input types' });
+    }
+
     // Input length validation
     if (title.length > 200) {
       return res.status(400).json({ error: 'Title too long (max 200 characters)' });
@@ -188,6 +254,11 @@ router.post('/upload', authenticateToken, upload.single('file'), async (req: Aut
 
     if (!title || !language) {
       return res.status(400).json({ error: 'Title and language are required' });
+    }
+
+    // Type validation
+    if (typeof title !== 'string' || typeof language !== 'string') {
+      return res.status(400).json({ error: 'Invalid input types' });
     }
 
     if (title.length > 200) {
@@ -243,15 +314,15 @@ router.post('/from-url', authenticateToken, async (req: AuthRequest, res: Respon
       return res.status(400).json({ error: 'URL and language are required' });
     }
 
-    // Validate URL
-    let parsedUrl: URL;
-    try {
-      parsedUrl = new URL(url);
-      if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-        throw new Error('Invalid protocol');
-      }
-    } catch {
-      return res.status(400).json({ error: 'Invalid URL' });
+    // Type validation
+    if (typeof url !== 'string' || typeof language !== 'string' || (title && typeof title !== 'string')) {
+      return res.status(400).json({ error: 'Invalid input types' });
+    }
+
+    // Validate URL with SSRF protection
+    const urlCheck = await isUrlSafe(url);
+    if (!urlCheck.safe) {
+      return res.status(400).json({ error: urlCheck.error || 'Invalid URL' });
     }
 
     if (title && title.length > 200) {

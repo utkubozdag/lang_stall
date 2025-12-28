@@ -12,6 +12,23 @@ const isValidEmail = (email: string): boolean => {
   return emailRegex.test(email);
 };
 
+// Password strength validation
+const isStrongPassword = (password: string): { valid: boolean; error?: string } => {
+  if (password.length < 8) {
+    return { valid: false, error: 'Password must be at least 8 characters' };
+  }
+  if (!/[a-z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one lowercase letter' };
+  }
+  if (!/[A-Z]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one uppercase letter' };
+  }
+  if (!/[0-9]/.test(password)) {
+    return { valid: false, error: 'Password must contain at least one number' };
+  }
+  return { valid: true };
+};
+
 // Register
 router.post('/register', async (req: Request, res: Response) => {
   try {
@@ -25,8 +42,9 @@ router.post('/register', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    const passwordCheck = isStrongPassword(password);
+    if (!passwordCheck.valid) {
+      return res.status(400).json({ error: passwordCheck.error });
     }
 
     if (email.length > 255 || (name && name.length > 100)) {
@@ -42,13 +60,14 @@ router.post('/register', async (req: Request, res: Response) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Generate verification token
+    // Generate verification token with 24-hour expiration
     const verificationToken = generateVerificationToken();
+    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     // Create user with verification token
     const result = await pool.query(
-      'INSERT INTO users (email, password, name, native_language, learning_language, verified, verification_token) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id',
-      [email, hashedPassword, name, native_language, learning_language, false, verificationToken]
+      'INSERT INTO users (email, password, name, native_language, learning_language, verified, verification_token, verification_token_expires) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+      [email, hashedPassword, name, native_language, learning_language, false, verificationToken, tokenExpires]
     );
 
     // Send verification email in background (don't block response)
@@ -146,9 +165,14 @@ router.get('/verify', async (req: Request, res: Response) => {
       return res.json({ message: 'Email already verified' });
     }
 
+    // Check if token has expired
+    if (user.verification_token_expires && new Date(user.verification_token_expires) < new Date()) {
+      return res.status(400).json({ error: 'Verification token has expired. Please request a new one.' });
+    }
+
     // Mark as verified and clear token
     await pool.query(
-      'UPDATE users SET verified = TRUE, verification_token = NULL WHERE id = $1',
+      'UPDATE users SET verified = TRUE, verification_token = NULL, verification_token_expires = NULL WHERE id = $1',
       [user.id]
     );
 
@@ -183,11 +207,12 @@ router.post('/resend-verification', async (req: Request, res: Response) => {
       return res.json({ message: genericMessage });
     }
 
-    // Generate new token
+    // Generate new token with 24-hour expiration
     const verificationToken = generateVerificationToken();
+    const tokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
     await pool.query(
-      'UPDATE users SET verification_token = $1 WHERE id = $2',
-      [verificationToken, user.id]
+      'UPDATE users SET verification_token = $1, verification_token_expires = $2 WHERE id = $3',
+      [verificationToken, tokenExpires, user.id]
     );
 
     await sendVerificationEmail(email, verificationToken);

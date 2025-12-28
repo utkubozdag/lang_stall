@@ -67,12 +67,45 @@ export default function Reader() {
     return content.split(/(\s+)/);
   };
 
+  // Cache expiration time: 7 days in milliseconds
+  const CACHE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+  const getCachedTranslation = (cacheKey: string): string | null => {
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (!cached) return null;
+
+      const parsed = JSON.parse(cached);
+      // Check if cache has expired
+      if (parsed.timestamp && Date.now() - parsed.timestamp > CACHE_EXPIRATION_MS) {
+        localStorage.removeItem(cacheKey);
+        return null;
+      }
+      return parsed.translation || null;
+    } catch {
+      // Legacy format (plain string) - remove it
+      localStorage.removeItem(cacheKey);
+      return null;
+    }
+  };
+
+  const setCachedTranslation = (cacheKey: string, translation: string) => {
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        translation,
+        timestamp: Date.now(),
+      }));
+    } catch {
+      // localStorage might be full - ignore
+    }
+  };
+
   const translateWord = async (word: string) => {
     if (!word || !text) return;
 
     // Check cache first (include target language in cache key)
     const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}`;
-    const cached = localStorage.getItem(cacheKey);
+    const cached = getCachedTranslation(cacheKey);
 
     if (cached) {
       setTranslation(cached);
@@ -92,8 +125,8 @@ export default function Reader() {
 
       const translationResult = response.data.translation;
 
-      // Cache the translation
-      localStorage.setItem(cacheKey, translationResult);
+      // Cache the translation with expiration
+      setCachedTranslation(cacheKey, translationResult);
 
       setTranslation(translationResult);
       setShowTranslation(true);

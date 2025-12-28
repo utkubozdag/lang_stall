@@ -6,7 +6,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string, nativeLanguage?: string, learningLanguage?: string) => Promise<void>;
+  register: (email: string, password: string, name?: string, nativeLanguage?: string, learningLanguage?: string) => Promise<{ requiresVerification: boolean }>;
   logout: () => void;
   updateTargetLanguage: (targetLanguage: string) => Promise<void>;
   loading: boolean;
@@ -58,20 +58,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     name?: string,
     nativeLanguage?: string,
     learningLanguage?: string
-  ) => {
-    const response = await api.post<AuthResponse>('/auth/register', {
+  ): Promise<{ requiresVerification: boolean }> => {
+    const response = await api.post<{ message: string; requiresVerification?: boolean } | AuthResponse>('/auth/register', {
       email,
       password,
       name,
       native_language: nativeLanguage,
       learning_language: learningLanguage,
     });
-    const { token, user } = response.data;
 
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setToken(token);
-    setUser(user);
+    // Check if registration requires email verification
+    if ('requiresVerification' in response.data && response.data.requiresVerification) {
+      return { requiresVerification: true };
+    }
+
+    // Legacy flow (if verification is disabled in the future)
+    if ('token' in response.data && 'user' in response.data) {
+      const { token, user } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
+      setToken(token);
+      setUser(user);
+    }
+
+    return { requiresVerification: false };
   };
 
   const logout = () => {
