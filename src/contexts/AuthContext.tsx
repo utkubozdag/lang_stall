@@ -2,6 +2,14 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import api from '../services/api';
 import { User, AuthResponse } from '../types';
 
+// Default anonymous user - matches the user created in db.ts
+const ANONYMOUS_USER: User = {
+  id: 1,
+  email: 'anonymous@langstall.local',
+  name: 'Anonymous',
+  target_language: 'English',
+};
+
 interface AuthContextType {
   user: User | null;
   token: string | null;
@@ -29,12 +37,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const parsedUser = JSON.parse(storedUser);
           setToken(storedToken);
           setUser(parsedUser);
+        } else {
+          // No stored auth - use anonymous user (no login required)
+          setUser(ANONYMOUS_USER);
         }
       } catch (error) {
-        // Clear corrupted data
+        // Clear corrupted data and use anonymous user
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         console.error('Failed to parse stored user:', error);
+        setUser(ANONYMOUS_USER);
       }
       setLoading(false);
     };
@@ -88,10 +100,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
-    setUser(null);
+    setUser(ANONYMOUS_USER);
   };
 
   const updateTargetLanguage = async (targetLanguage: string) => {
+    // For anonymous user, just update local state without API call
+    if (!token) {
+      const updatedUser = { ...user!, target_language: targetLanguage };
+      setUser(updatedUser);
+      return;
+    }
+
     const response = await api.patch<{ user: User }>('/auth/preferences', {
       target_language: targetLanguage,
     });

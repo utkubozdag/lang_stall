@@ -13,20 +13,30 @@ export interface AuthRequest extends Request {
   user?: User;
 }
 
+// Default anonymous user ID (created in db.ts initDb)
+const ANONYMOUS_USER_ID = 1;
+
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
+  let userId = ANONYMOUS_USER_ID;
+
+  // If token provided, try to verify it
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { userId: number };
+      userId = decoded.userId;
+    } catch {
+      // Invalid token, fall back to anonymous user
+    }
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] }) as { userId: number };
     // Exclude password from query to prevent accidental exposure
     const result = await pool.query(
       'SELECT id, email, name, native_language, learning_language, target_language, verified FROM users WHERE id = $1',
-      [decoded.userId]
+      [userId]
     );
     const user = result.rows[0];
 
@@ -37,7 +47,7 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     req.user = user;
     next();
   } catch (error) {
-    return res.status(403).json({ error: 'Invalid token' });
+    return res.status(500).json({ error: 'Database error' });
   }
 };
 

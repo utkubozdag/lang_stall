@@ -156,6 +156,13 @@ export const initDb = async () => {
       END $$;
     `);
 
+    // Create default anonymous user for no-login access
+    await client.query(`
+      INSERT INTO users (id, email, password, name, verified, target_language)
+      VALUES (1, 'anonymous@langstall.local', '', 'Anonymous', TRUE, 'English')
+      ON CONFLICT (id) DO NOTHING;
+    `);
+
     console.log('Database initialized');
   } finally {
     client.release();
