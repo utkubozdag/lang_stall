@@ -186,9 +186,8 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     const target = targetLanguage || 'English';
 
-    // Mnemonic instruction using StoryWeave method (only for short words/phrases)
-    const mnemonicInstruction = generateMnemonic && !isLongText ? `
-Mnemonic: [Create ONE memorable sentence using ${target} words that sound like "${text}" AND logically relate to its meaning. Requirements: (1) Must create a vivid mental image you can visualize, (2) The story must make logical sense - no random word salad, (3) Sound-alike words should naturally fit the scene. Output ONLY the final sentence as plain text - no bold, italic, or any formatting.]` : '';
+    // Mnemonic instruction - phonetic keyword method
+    const shouldGenerateMnemonicPrompt = generateMnemonic && !isLongText;
 
     if (isLongText) {
       // For sentences and passages - provide full translation
@@ -207,22 +206,24 @@ Keep the translation natural and accurate.`;
 Word: "${text}"
 Context: "${context}"
 
-CRITICAL: You MUST write EVERYTHING in ${target} (except for the Mnemonic which should be in ${target} but can reference the original word sound).
+Write EVERYTHING in ${target}.
 
-Format (use ${target} language only):
-Meaning: [translation in ${target}]
-Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInstruction}`;
+Format (each on its own line):
+Meaning: [translation]
+Explanation: [brief grammar note - part of speech, usage]${shouldGenerateMnemonicPrompt ? `
+Mnemonic: [Create a memorable sentence using ${target} words that PHONETICALLY APPROXIMATE the sound of "${text}". The sentence must also connect to the word's meaning. Example: For Spanish "pato" (duck), you might write "I PAT O' my rubber duck in the bath" - where "PAT O" sounds like "pato". Make it vivid and memorable.]` : ''}`;
     } else {
       // For words/short phrases without context
       prompt = `You are a translator. Translate this ${sourceLanguage || ''} word/phrase to ${target}.
 
 Word: "${text}"
 
-CRITICAL: You MUST write EVERYTHING in ${target} (except for the Mnemonic which should be in ${target} but can reference the original word sound).
+Write EVERYTHING in ${target}.
 
-Format (use ${target} language only):
-Meaning: [translation in ${target}]
-Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInstruction}`;
+Format (each on its own line):
+Meaning: [translation]
+Explanation: [brief grammar note - part of speech, usage]${shouldGenerateMnemonicPrompt ? `
+Mnemonic: [Create a memorable sentence using ${target} words that PHONETICALLY APPROXIMATE the sound of "${text}". The sentence must also connect to the word's meaning. Example: For Spanish "pato" (duck), you might write "I PAT O' my rubber duck in the bath" - where "PAT O" sounds like "pato". Make it vivid and memorable.]` : ''}`;
     }
 
     // Call the appropriate API based on provider
