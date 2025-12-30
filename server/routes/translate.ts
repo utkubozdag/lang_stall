@@ -8,6 +8,12 @@ const router = Router();
 const GEMINI_INPUT_PRICE = 0.10;  // $0.10 per 1M input tokens
 const GEMINI_OUTPUT_PRICE = 0.30; // $0.30 per 1M output tokens
 
+// Grok pricing (per 1M tokens) - grok-4-1-fast-non-reasoning (under 128k)
+const GROK_INPUT_PRICE = 0.20;   // $0.20 per 1M input tokens
+const GROK_OUTPUT_PRICE = 0.50;  // $0.50 per 1M output tokens
+
+type ModelProvider = 'gemini' | 'grok';
+
 // Estimate tokens (roughly 4 characters per token)
 const estimateTokens = (text: string): number => {
   return Math.ceil(text.length / 4);
@@ -24,10 +30,12 @@ const sanitizeMarkdown = (text: string): string => {
 };
 
 // Log API cost to database
-const logApiCost = async (inputTokens: number, outputTokens: number): Promise<void> => {
+const logApiCost = async (inputTokens: number, outputTokens: number, provider: ModelProvider = 'gemini'): Promise<void> => {
   try {
-    const cost = (inputTokens * GEMINI_INPUT_PRICE / 1_000_000) +
-                 (outputTokens * GEMINI_OUTPUT_PRICE / 1_000_000);
+    const inputPrice = provider === 'grok' ? GROK_INPUT_PRICE : GEMINI_INPUT_PRICE;
+    const outputPrice = provider === 'grok' ? GROK_OUTPUT_PRICE : GEMINI_OUTPUT_PRICE;
+    const cost = (inputTokens * inputPrice / 1_000_000) +
+                 (outputTokens * outputPrice / 1_000_000);
 
     // Get first day of current month
     const now = new Date();
@@ -50,10 +58,93 @@ const logApiCost = async (inputTokens: number, outputTokens: number): Promise<vo
   }
 };
 
-// Translate word or phrase using Gemini
+// Call Grok API for translation
+const callGrokAPI = async (prompt: string): Promise<string> => {
+  const XAI_API_KEY = process.env.XAI_API_KEY;
+  if (!XAI_API_KEY) {
+    throw new Error('XAI_API_KEY not configured');
+  }
+
+  const response = await fetch('https://api.x.ai/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${XAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'grok-4-1-fast-non-reasoning',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.3,
+    }),
+  });
+
+  const data = await response.json() as {
+    choices?: Array<{ message?: { content?: string } }>;
+    usage?: { prompt_tokens?: number; completion_tokens?: number };
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    console.error('Grok API error:', data);
+    throw new Error('Grok translation failed');
+  }
+
+  const result = data.choices?.[0]?.message?.content || 'Translation not available';
+
+  // Log cost
+  const inputTokens = data.usage?.prompt_tokens || estimateTokens(prompt);
+  const outputTokens = data.usage?.completion_tokens || estimateTokens(result);
+  logApiCost(inputTokens, outputTokens, 'grok');
+
+  return result;
+};
+
+// Call Gemini API for translation
+const callGeminiAPI = async (prompt: string): Promise<string> => {
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    throw new Error('Gemini API key not configured');
+  }
+
+  const response = await fetch(
+    'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY,
+      },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    }
+  );
+
+  const data = await response.json() as {
+    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    error?: { message?: string };
+  };
+
+  if (!response.ok) {
+    console.error('Gemini API error:', data);
+    throw new Error('Gemini translation failed');
+  }
+
+  const result = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
+
+  // Log cost
+  const inputTokens = estimateTokens(prompt);
+  const outputTokens = estimateTokens(result);
+  logApiCost(inputTokens, outputTokens, 'gemini');
+
+  return result;
+};
+
+// Translate word or phrase
 router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
-    const { text, context, targetLanguage, sourceLanguage, generateMnemonic } = req.body;
+    const { text, context, targetLanguage, sourceLanguage, generateMnemonic, model } = req.body;
+    const provider: ModelProvider = model === 'grok' ? 'grok' : 'gemini';
 
     if (!text) {
       return res.status(400).json({ error: 'Text is required' });
@@ -86,11 +177,6 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
 
     if (sourceLanguage && (typeof sourceLanguage !== 'string' || sourceLanguage.length > 50)) {
       return res.status(400).json({ error: 'Invalid source language' });
-    }
-
-    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-    if (!GEMINI_API_KEY) {
-      return res.status(500).json({ error: 'Gemini API key not configured' });
     }
 
     // Determine if it's a word/phrase or a longer passage (wordCount already calculated above)
@@ -139,43 +225,10 @@ Meaning: [translation in ${target}]
 Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInstruction}`;
     }
 
-    const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt,
-                },
-              ],
-            },
-          ],
-        }),
-      }
-    );
-
-    const data = await response.json() as {
-      candidates?: Array<{
-        content?: {
-          parts?: Array<{ text?: string }>;
-        };
-      }>;
-      error?: { message?: string };
-    };
-
-    if (!response.ok) {
-      console.error('Gemini API error:', data);
-      return res.status(500).json({ error: 'Translation failed' });
-    }
-
-    const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
+    // Call the appropriate API based on provider
+    const fullResponse = provider === 'grok'
+      ? await callGrokAPI(prompt)
+      : await callGeminiAPI(prompt);
 
     // Always filter out mnemonic lines from translation (LLM may add them unprompted)
     // But only return mnemonic value when generateMnemonic is true
@@ -190,11 +243,6 @@ Explanation: [grammar note in ${target} - tense, formality, usage]${mnemonicInst
     if (generateMnemonic && !isLongText && mnemonicLine) {
       mnemonic = sanitizeMarkdown(mnemonicLine.substring('mnemonic:'.length));
     }
-
-    // Log API cost (async, don't wait)
-    const inputTokens = estimateTokens(prompt);
-    const outputTokens = estimateTokens(fullResponse);
-    logApiCost(inputTokens, outputTokens);
 
     res.json({ translation, mnemonic });
   } catch (error) {
