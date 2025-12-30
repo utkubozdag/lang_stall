@@ -208,10 +208,10 @@ Context: "${context}"
 
 Write EVERYTHING in ${target}.
 
-Format (each on its own line):
+Format (each on its own line, be concise):
 Meaning: [translation]
-Explanation: [brief grammar note - part of speech, usage]${shouldGenerateMnemonicPrompt ? `
-Mnemonic: [Create a memorable sentence using ${target} words that PHONETICALLY APPROXIMATE the sound of "${text}". The sentence must also connect to the word's meaning. Example: For Spanish "pato" (duck), you might write "I PAT O' my rubber duck in the bath" - where "PAT O" sounds like "pato". Make it vivid and memorable.]` : ''}`;
+Explanation: [ONE short sentence only - part of speech and basic usage]${shouldGenerateMnemonicPrompt ? `
+Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like "${text}" while connecting to its meaning. Example: Spanish "pato" (duck) → "I PAT O' my rubber duck" where PAT-O sounds like pato]` : ''}`;
     } else {
       // For words/short phrases without context
       prompt = `You are a translator. Translate this ${sourceLanguage || ''} word/phrase to ${target}.
@@ -220,10 +220,10 @@ Word: "${text}"
 
 Write EVERYTHING in ${target}.
 
-Format (each on its own line):
+Format (each on its own line, be concise):
 Meaning: [translation]
-Explanation: [brief grammar note - part of speech, usage]${shouldGenerateMnemonicPrompt ? `
-Mnemonic: [Create a memorable sentence using ${target} words that PHONETICALLY APPROXIMATE the sound of "${text}". The sentence must also connect to the word's meaning. Example: For Spanish "pato" (duck), you might write "I PAT O' my rubber duck in the bath" - where "PAT O" sounds like "pato". Make it vivid and memorable.]` : ''}`;
+Explanation: [ONE short sentence only - part of speech and basic usage]${shouldGenerateMnemonicPrompt ? `
+Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like "${text}" while connecting to its meaning. Example: Spanish "pato" (duck) → "I PAT O' my rubber duck" where PAT-O sounds like pato]` : ''}`;
     }
 
     // Call the appropriate API based on provider
