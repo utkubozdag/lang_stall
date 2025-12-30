@@ -103,6 +103,11 @@ router.post('/', authenticateToken, async (req: AuthRequest, res: Response) => {
     // Mnemonic instruction - phonetic keyword method
     const shouldGenerateMnemonicPrompt = generateMnemonic && !isLongText;
 
+    // Add reading line for languages with non-phonetic scripts
+    const needsReading = ['Japanese', 'Chinese', 'Korean'].includes(sourceLanguage || '');
+    const readingInstruction = needsReading ? `
+Reading: [pronunciation in native script - hiragana for Japanese, pinyin for Chinese, romanization for Korean]` : '';
+
     if (isLongText) {
       // For sentences and passages - provide full translation
       prompt = `Translate this ${sourceLanguage || ''} text to ${target}.
@@ -120,9 +125,9 @@ Keep the translation natural and accurate.`;
 Word: "${text}"
 Context: "${context}"
 
-Write EVERYTHING in ${target}.
+Write EVERYTHING in ${target} except the Reading line.
 
-Format (each on its own line, be concise):
+Format (each on its own line, be concise):${readingInstruction}
 Meaning: [translation]
 Explanation: [ONE short sentence only - part of speech and basic usage]${shouldGenerateMnemonicPrompt ? `
 Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like "${text}" while connecting to its meaning. Example: Spanish "pato" (duck) → "I PAT O' my rubber duck" where PAT-O sounds like pato]` : ''}`;
@@ -132,9 +137,9 @@ Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like 
 
 Word: "${text}"
 
-Write EVERYTHING in ${target}.
+Write EVERYTHING in ${target} except the Reading line.
 
-Format (each on its own line, be concise):
+Format (each on its own line, be concise):${readingInstruction}
 Meaning: [translation]
 Explanation: [ONE short sentence only - part of speech and basic usage]${shouldGenerateMnemonicPrompt ? `
 Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like "${text}" while connecting to its meaning. Example: Spanish "pato" (duck) → "I PAT O' my rubber duck" where PAT-O sounds like pato]` : ''}`;
@@ -166,12 +171,15 @@ Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like 
 
     const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
 
-    // Always filter out mnemonic lines from translation (LLM may add them unprompted)
+    // Parse response lines
     const lines = fullResponse.split('\n');
     const mnemonicLine = lines.find(line => line.toLowerCase().startsWith('mnemonic:'));
+    const readingLine = lines.find(line => line.toLowerCase().startsWith('reading:'));
 
-    // Always remove mnemonic lines from translation
-    const translation = lines.filter(line => !line.toLowerCase().startsWith('mnemonic:')).join('\n').trim();
+    // Remove mnemonic and reading lines from translation display
+    const translation = lines
+      .filter(line => !line.toLowerCase().startsWith('mnemonic:') && !line.toLowerCase().startsWith('reading:'))
+      .join('\n').trim();
 
     // Only capture mnemonic value when requested and not long text
     let mnemonic: string | undefined;
@@ -179,12 +187,18 @@ Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like 
       mnemonic = sanitizeMarkdown(mnemonicLine.substring('mnemonic:'.length));
     }
 
+    // Capture reading for languages with non-phonetic scripts
+    let reading: string | undefined;
+    if (readingLine) {
+      reading = sanitizeMarkdown(readingLine.substring('reading:'.length));
+    }
+
     // Log API cost (async, don't wait)
     const inputTokens = estimateTokens(prompt);
     const outputTokens = estimateTokens(fullResponse);
     logApiCost(inputTokens, outputTokens);
 
-    res.json({ translation, mnemonic });
+    res.json({ translation, mnemonic, reading });
   } catch (error) {
     console.error('Translation error:', error);
     res.status(500).json({ error: 'Server error' });

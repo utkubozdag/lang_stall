@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import TinySegmenter from 'tiny-segmenter';
 import api from '../services/api';
 import { Text } from '../types';
 import { useAuth } from '../contexts/AuthContext';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { LANGUAGES } from '../constants/languages';
+
+// Japanese word segmenter
+const segmenter = new TinySegmenter();
 
 export default function Reader() {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +20,7 @@ export default function Reader() {
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
   const [translation, setTranslation] = useState('');
   const [mnemonic, setMnemonic] = useState('');
+  const [reading, setReading] = useState('');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
@@ -45,13 +50,25 @@ export default function Reader() {
     }
   };
 
-  const getWords = (content: string) => {
+  // Check if text contains Japanese characters
+  const isJapanese = (str: string) => {
+    return /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/.test(str);
+  };
+
+  const getWords = (content: string, language?: string) => {
+    // Use TinySegmenter for Japanese text
+    if (language === 'Japanese' || isJapanese(content)) {
+      const segments = segmenter.segment(content);
+      // Return segments as array (no whitespace interleaving needed for Japanese)
+      return segments;
+    }
+    // Default: split by whitespace, keeping whitespace as separate elements
     return content.split(/(\s+)/);
   };
 
   const CACHE_EXPIRATION_MS = 7 * 24 * 60 * 60 * 1000;
 
-  const getCachedTranslation = (cacheKey: string): { translation: string; mnemonic?: string } | null => {
+  const getCachedTranslation = (cacheKey: string): { translation: string; mnemonic?: string; reading?: string } | null => {
     try {
       const cached = localStorage.getItem(cacheKey);
       if (!cached) return null;
@@ -61,18 +78,19 @@ export default function Reader() {
         localStorage.removeItem(cacheKey);
         return null;
       }
-      return parsed.translation ? { translation: parsed.translation, mnemonic: parsed.mnemonic } : null;
+      return parsed.translation ? { translation: parsed.translation, mnemonic: parsed.mnemonic, reading: parsed.reading } : null;
     } catch {
       localStorage.removeItem(cacheKey);
       return null;
     }
   };
 
-  const setCachedTranslation = (cacheKey: string, translation: string, mnemonic?: string) => {
+  const setCachedTranslation = (cacheKey: string, translation: string, mnemonic?: string, reading?: string) => {
     try {
       localStorage.setItem(cacheKey, JSON.stringify({
         translation,
         mnemonic,
+        reading,
         timestamp: Date.now(),
       }));
     } catch {
@@ -91,6 +109,7 @@ export default function Reader() {
     if (cached) {
       setTranslation(cached.translation);
       setMnemonic(cached.mnemonic || '');
+      setReading(cached.reading || '');
       setShowTranslation(true);
       return;
     }
@@ -98,6 +117,7 @@ export default function Reader() {
     setLoading(true);
     setShowTranslation(false);
     setMnemonic('');
+    setReading('');
     try {
       const response = await api.post('/translate', {
         text: word,
@@ -109,9 +129,11 @@ export default function Reader() {
 
       const translationResult = response.data.translation;
       const mnemonicResult = response.data.mnemonic || '';
-      setCachedTranslation(cacheKey, translationResult, mnemonicResult);
+      const readingResult = response.data.reading || '';
+      setCachedTranslation(cacheKey, translationResult, mnemonicResult, readingResult);
       setTranslation(translationResult);
       setMnemonic(mnemonicResult);
+      setReading(readingResult);
       setShowTranslation(true);
     } catch (error) {
       console.error('Translation error:', error);
@@ -139,7 +161,7 @@ export default function Reader() {
   const handleWordClick = (index: number, word: string) => {
     if (!word.trim() || !text) return;
 
-    const words = getWords(text.content);
+    const words = getWords(text.content, text.language);
 
     // If clicking on a selected word, deselect all
     if (selectedWords.includes(index)) {
@@ -223,6 +245,7 @@ export default function Reader() {
     setShowTranslation(false);
     setTranslation('');
     setMnemonic('');
+    setReading('');
   };
 
   const getContext = () => {
@@ -336,9 +359,14 @@ export default function Reader() {
         <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-20">
           <div className="max-w-4xl mx-auto p-4">
             <div className="flex items-start justify-between mb-3">
-              <div className="flex items-baseline gap-2 sm:gap-3 min-w-0">
-                <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{selectedText}</div>
-                <span className="text-xs sm:text-sm text-gray-400 flex-shrink-0">({text.language})</span>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2 sm:gap-3">
+                  <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{selectedText}</div>
+                  <span className="text-xs sm:text-sm text-gray-400 flex-shrink-0">({text.language})</span>
+                </div>
+                {reading && (
+                  <div className="text-sm text-blue-600 mt-0.5">{reading}</div>
+                )}
               </div>
               <button
                 onClick={clearSelection}
