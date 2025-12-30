@@ -25,10 +25,6 @@ export default function Reader() {
     const saved = localStorage.getItem('mnemonicEnabled');
     return saved === 'true';
   });
-  const [selectedModel, setSelectedModel] = useState<'gemini' | 'grok'>(() => {
-    const saved = localStorage.getItem('selectedModel');
-    return saved === 'grok' ? 'grok' : 'gemini';
-  });
 
   useEffect(() => {
     if (id) {
@@ -39,10 +35,6 @@ export default function Reader() {
   useEffect(() => {
     localStorage.setItem('mnemonicEnabled', String(mnemonicEnabled));
   }, [mnemonicEnabled]);
-
-  useEffect(() => {
-    localStorage.setItem('selectedModel', selectedModel);
-  }, [selectedModel]);
 
   const loadText = async () => {
     try {
@@ -93,7 +85,7 @@ export default function Reader() {
 
     // Only generate mnemonic for single words when enabled
     const shouldGenerateMnemonic = mnemonicEnabled && allowMnemonic;
-    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}:${selectedModel}:${shouldGenerateMnemonic ? 'mnemonic' : 'no-mnemonic'}`;
+    const cacheKey = `translation:${text.language}:${targetLanguage}:${word.toLowerCase()}:${shouldGenerateMnemonic ? 'mnemonic' : 'no-mnemonic'}`;
     const cached = getCachedTranslation(cacheKey);
 
     if (cached) {
@@ -113,7 +105,6 @@ export default function Reader() {
         targetLanguage: targetLanguage,
         context: text.content.substring(0, 200),
         generateMnemonic: shouldGenerateMnemonic,
-        model: selectedModel,
       });
 
       const translationResult = response.data.translation;
@@ -290,40 +281,20 @@ export default function Reader() {
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 pb-48">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{text.title}</h1>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setSelectedModel(selectedModel === 'gemini' ? 'grok' : 'gemini')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                selectedModel === 'grok'
-                  ? 'bg-orange-100 text-orange-700'
-                  : 'bg-blue-100 text-blue-700'
-              }`}
-              title={`Using ${selectedModel === 'grok' ? 'Grok' : 'Gemini'} for translation`}
-            >
-              {selectedModel === 'grok' ? (
-                <span className="text-sm">𝕏</span>
-              ) : (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              )}
-              <span className="hidden sm:inline">{selectedModel === 'grok' ? 'Grok' : 'Gemini'}</span>
-            </button>
-            <button
-              onClick={() => setMnemonicEnabled(!mnemonicEnabled)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
-                mnemonicEnabled
-                  ? 'bg-purple-100 text-purple-700'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-              title="Link and Story Method - Generate memory aids for words"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-              </svg>
-              <span className="hidden sm:inline">Mnemonic</span>
-            </button>
-          </div>
+          <button
+            onClick={() => setMnemonicEnabled(!mnemonicEnabled)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
+              mnemonicEnabled
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+            }`}
+            title="Link and Story Method - Generate memory aids for words"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            <span className="hidden sm:inline">Mnemonic</span>
+          </button>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 md:p-10">
