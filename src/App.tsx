@@ -6,6 +6,9 @@ import Vocabulary from './pages/Vocabulary';
 import Flashcards from './pages/Flashcards';
 import Guide from './pages/Guide';
 import About from './pages/About';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Verify from './pages/Verify';
 
 function LoadingWrapper({ children }: { children: React.ReactNode }) {
   const { loading } = useAuth();
@@ -33,6 +36,9 @@ function App() {
             <Route path="/flashcards" element={<Flashcards />} />
             <Route path="/guide" element={<Guide />} />
             <Route path="/about" element={<About />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify" element={<Verify />} />
           </Routes>
         </LoadingWrapper>
       </AuthProvider>
