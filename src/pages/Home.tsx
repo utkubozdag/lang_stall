@@ -288,6 +288,22 @@ export default function Home() {
           <p className="text-gray-600">Continue your language learning journey</p>
         </div>
 
+        {/* Public space notice for anonymous users */}
+        {!token && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <p className="text-sm text-amber-800">
+              This is a shared public space. Anyone can view, edit, or remove texts.{' '}
+              <button
+                onClick={() => navigate('/register')}
+                className="font-medium text-amber-900 underline hover:text-amber-700"
+              >
+                Sign up for free
+              </button>
+              {' '}to get your own private library.
+            </p>
+          </div>
+        )}
+
         {/* Support Banner - only show if Ko-fi URL is configured */}
         {stats && stats.kofiUrl && (
           <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-4">
