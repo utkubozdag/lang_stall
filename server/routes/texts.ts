@@ -157,12 +157,12 @@ const parseEpub = async (buffer: Buffer): Promise<string> => {
   }
 };
 
-// Get all texts for a user
+// Get all texts for a user (excluding soft-deleted)
 router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
     const result = await pool.query(
-      'SELECT * FROM texts WHERE user_id = $1 ORDER BY created_at DESC',
+      'SELECT * FROM texts WHERE user_id = $1 AND deleted_at IS NULL ORDER BY created_at DESC',
       [userId]
     );
 
@@ -173,7 +173,7 @@ router.get('/', authenticateToken, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// Get single text
+// Get single text (excluding soft-deleted)
 router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -186,7 +186,7 @@ router.get('/:id', authenticateToken, async (req: AuthRequest, res: Response) =>
     }
 
     const result = await pool.query(
-      'SELECT * FROM texts WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM texts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
       [textId, userId]
     );
 
@@ -410,7 +410,7 @@ router.post('/from-url', authenticateToken, async (req: AuthRequest, res: Respon
   }
 });
 
-// Update text
+// Update text (excluding soft-deleted)
 router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -423,9 +423,9 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) 
       return res.status(400).json({ error: 'Invalid text ID' });
     }
 
-    // Check text exists and belongs to user
+    // Check text exists and belongs to user (and not soft-deleted)
     const existing = await pool.query(
-      'SELECT * FROM texts WHERE id = $1 AND user_id = $2',
+      'SELECT * FROM texts WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
       [textId, userId]
     );
 
@@ -480,7 +480,7 @@ router.patch('/:id', authenticateToken, async (req: AuthRequest, res: Response) 
   }
 });
 
-// Delete text
+// Soft delete text (set deleted_at timestamp instead of removing from DB)
 router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response) => {
   try {
     const userId = req.user!.id;
@@ -493,7 +493,7 @@ router.delete('/:id', authenticateToken, async (req: AuthRequest, res: Response)
     }
 
     const result = await pool.query(
-      'DELETE FROM texts WHERE id = $1 AND user_id = $2',
+      'UPDATE texts SET deleted_at = NOW() WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL',
       [textId, userId]
     );
 
