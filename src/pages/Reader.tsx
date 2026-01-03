@@ -410,7 +410,11 @@ export default function Reader() {
                   <button
                     onClick={handleSaveVocabulary}
                     disabled={saving}
-                    className="flex-1 bg-blue-600 text-white py-2.5 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 transition font-medium text-sm flex items-center justify-center gap-2"
+                    className={`flex-1 text-white py-2.5 px-4 rounded-lg disabled:opacity-50 transition font-medium text-sm flex items-center justify-center gap-2 ${
+                      isAristocratic
+                        ? 'bg-gold-500 hover:bg-gold-600'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
                   >
                     {saving && (
                       <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
