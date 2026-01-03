@@ -1,12 +1,15 @@
+import { useTheme } from '../contexts/ThemeContext';
 import Header from '../components/Header';
 
 export default function Guide() {
+  const { isAristocratic } = useTheme();
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen theme-bg-secondary theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
       <Header showBackButton backTo="/" title="How to Use" maxWidth="4xl" />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 md:p-8 space-y-8">
+        <div className="theme-bg-primary rounded-xl shadow-sm border theme-border p-6 md:p-8 space-y-8">
           {/* Step 1 */}
           <section>
             <div className="flex items-center gap-3 mb-3">

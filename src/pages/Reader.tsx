@@ -4,6 +4,7 @@ import TinySegmenter from 'tiny-segmenter';
 import api from '../services/api';
 import { Text } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { LANGUAGES } from '../constants/languages';
@@ -15,6 +16,7 @@ export default function Reader() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user, updateTargetLanguage } = useAuth();
+  const { isAristocratic } = useTheme();
   const [text, setText] = useState<Text | null>(null);
   const [selectedText, setSelectedText] = useState('');
   const [selectedWords, setSelectedWords] = useState<number[]>([]);
@@ -261,8 +263,8 @@ export default function Reader() {
 
   if (!text) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="flex items-center gap-3 text-gray-600">
+      <div className={`min-h-screen theme-bg-secondary flex items-center justify-center ${isAristocratic ? 'aristocratic' : ''}`}>
+        <div className="flex items-center gap-3 theme-text-secondary theme-font">
           <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -276,7 +278,7 @@ export default function Reader() {
   const words = getWords(text.content);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen theme-bg-secondary theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
       <Header
         showBackButton
         backTo="/"
@@ -303,7 +305,7 @@ export default function Reader() {
       {/* Reading Area */}
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 pb-48">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">{text.title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold theme-text-primary">{text.title}</h1>
           <button
             onClick={() => setMnemonicEnabled(!mnemonicEnabled)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
@@ -320,8 +322,8 @@ export default function Reader() {
           </button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 md:p-10">
-          <p className="text-base sm:text-lg leading-relaxed text-gray-800" style={{ lineHeight: '2' }}>
+        <div className="theme-bg-primary rounded-xl shadow-sm border theme-border p-4 sm:p-6 md:p-10">
+          <p className="text-base sm:text-lg leading-relaxed theme-text-primary" style={{ lineHeight: '2' }}>
             {words.map((word, index) => {
               const isWhitespace = !word.trim();
               const isSelected = selectedWords.includes(index);
@@ -346,7 +348,7 @@ export default function Reader() {
             })}
           </p>
 
-          <p className="text-xs sm:text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100">
+          <p className="text-xs sm:text-sm theme-text-muted mt-6 pt-4 border-t theme-border">
             {selectedWords.length > 0
               ? 'Click adjacent word to extend phrase, or click selected word to deselect'
               : 'Click a word to translate, click more adjacent words for phrases'}
@@ -356,13 +358,13 @@ export default function Reader() {
 
       {/* Translation Panel */}
       {selectedText && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-2xl z-20">
+        <div className="fixed bottom-0 left-0 right-0 theme-bg-primary border-t theme-border shadow-2xl z-20">
           <div className="max-w-4xl mx-auto p-4">
             <div className="flex items-start justify-between mb-3">
               <div className="min-w-0">
                 <div className="flex items-baseline gap-2 sm:gap-3">
-                  <div className="text-lg sm:text-xl font-bold text-gray-900 truncate">{selectedText}</div>
-                  <span className="text-xs sm:text-sm text-gray-400 flex-shrink-0">({text.language})</span>
+                  <div className="text-lg sm:text-xl font-bold theme-text-primary truncate">{selectedText}</div>
+                  <span className="text-xs sm:text-sm theme-text-muted flex-shrink-0">({text.language})</span>
                 </div>
                 {reading && (
                   <div className="text-sm text-blue-600 mt-0.5">{reading}</div>
@@ -380,8 +382,8 @@ export default function Reader() {
             </div>
 
             {loading ? (
-              <div className="bg-gray-50 rounded-lg p-4 text-center">
-                <div className="flex items-center justify-center gap-2 text-gray-500">
+              <div className="theme-bg-tertiary rounded-lg p-4 text-center">
+                <div className="flex items-center justify-center gap-2 theme-text-secondary">
                   <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -391,8 +393,8 @@ export default function Reader() {
               </div>
             ) : showTranslation ? (
               <div className="space-y-3">
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-sm sm:text-base">{translation}</p>
+                <div className="theme-bg-tertiary rounded-lg p-4">
+                  <p className="theme-text-primary whitespace-pre-wrap leading-relaxed text-sm sm:text-base">{translation}</p>
                 </div>
                 {mnemonic && (
                   <div className="bg-purple-50 rounded-lg p-3 border border-purple-100">

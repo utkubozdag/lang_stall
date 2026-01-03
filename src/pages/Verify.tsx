@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 
 export default function Verify() {
+  const { isAristocratic } = useTheme();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
@@ -29,13 +31,13 @@ export default function Verify() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
+    <div className={`min-h-screen theme-bg-secondary flex items-center justify-center px-4 theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="theme-bg-primary rounded-2xl shadow-xl border theme-border p-8 text-center">
           {status === 'loading' && (
             <>
               <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-              <h2 className="text-xl font-semibold text-gray-900">Verifying your email...</h2>
+              <h2 className="text-xl font-semibold theme-text-primary">Verifying your email...</h2>
             </>
           )}
 
@@ -46,8 +48,8 @@ export default function Verify() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Email Verified!</h2>
-              <p className="text-gray-600 mb-6">{message}</p>
+              <h2 className="text-xl font-semibold theme-text-primary mb-2">Email Verified!</h2>
+              <p className="theme-text-secondary mb-6">{message}</p>
               <Link
                 to="/login"
                 className="inline-block bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition font-medium"
@@ -64,8 +66,8 @@ export default function Verify() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               </div>
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">Verification Failed</h2>
-              <p className="text-gray-600 mb-6">{message}</p>
+              <h2 className="text-xl font-semibold theme-text-primary mb-2">Verification Failed</h2>
+              <p className="theme-text-secondary mb-6">{message}</p>
               <Link
                 to="/login"
                 className="inline-block bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition font-medium"

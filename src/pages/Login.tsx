@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import Logo from '../components/Logo';
 
 export default function Login() {
+  const { isAristocratic } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -27,15 +29,15 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className={`min-h-screen theme-bg-secondary flex items-center justify-center px-4 theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
       <div className="max-w-md w-full">
         <div className="flex flex-col items-center mb-8">
           <Logo size="lg" />
-          <p className="text-gray-600 mt-2">Learn languages by reading</p>
+          <p className="theme-text-secondary mt-2">Learn languages by reading</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6">Welcome back</h2>
+        <div className="theme-bg-primary rounded-2xl shadow-sm border theme-border p-6 sm:p-8">
+          <h2 className="text-xl sm:text-2xl font-semibold theme-text-primary mb-6">Welcome back</h2>
 
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-6 text-sm">

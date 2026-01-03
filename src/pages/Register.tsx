@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useTheme } from '../contexts/ThemeContext';
 import Logo from '../components/Logo';
 import { LANGUAGES } from '../constants/languages';
 
 export default function Register() {
+  const { isAristocratic } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -37,9 +39,9 @@ export default function Register() {
 
   if (registered) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+      <div className={`min-h-screen theme-bg-secondary flex items-center justify-center px-4 theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
         <div className="max-w-md w-full">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8 text-center">
+          <div className="theme-bg-primary rounded-2xl shadow-sm border theme-border p-6 sm:p-8 text-center">
             <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
@@ -68,15 +70,15 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-8">
+    <div className={`min-h-screen theme-bg-secondary flex items-center justify-center px-4 py-8 theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
       <div className="max-w-md w-full">
         <div className="flex flex-col items-center mb-8">
           <Logo size="lg" />
-          <p className="text-gray-600 mt-2">Learn languages by reading</p>
+          <p className="theme-text-secondary mt-2">Learn languages by reading</p>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6">Create account</h2>
+        <div className="theme-bg-primary rounded-2xl shadow-sm border theme-border p-6 sm:p-8">
+          <h2 className="text-xl sm:text-2xl font-semibold theme-text-primary mb-6">Create account</h2>
 
           {error && (
             <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded mb-6 text-sm">
