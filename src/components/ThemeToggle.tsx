@@ -7,22 +7,23 @@ export default function ThemeToggle() {
     <button
       onClick={toggleTheme}
       className={`
-        relative flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium
-        transition-all duration-200 ease-in-out
+        relative flex items-center gap-2 px-3 py-1.5 text-sm font-medium
+        transition-all duration-300 ease-in-out
         ${isAristocratic
-          ? 'bg-ivory-300 text-charcoal-800 border border-gold-500 hover:bg-ivory-400'
-          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200'
+          ? 'bg-gradient-to-b from-[#F5EED9] to-[#EBE5D9] text-[#6B4E12] border border-[#C9B896] hover:border-[#996515] rounded shadow-sm'
+          : 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 rounded-md'
         }
       `}
-      title={isAristocratic ? 'Switch to default theme' : 'Switch to aristocratic theme'}
-      aria-label={isAristocratic ? 'Switch to default theme' : 'Switch to aristocratic theme'}
+      title={isAristocratic ? 'Switch to modern theme' : 'Switch to aristocratic theme'}
+      aria-label={isAristocratic ? 'Switch to modern theme' : 'Switch to aristocratic theme'}
     >
       {isAristocratic ? (
         <>
-          <svg className="w-4 h-4 text-gold-600" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" />
+          {/* Crown icon */}
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5zm14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
           </svg>
-          <span className="hidden sm:inline font-serif">Classic</span>
+          <span className="hidden sm:inline tracking-wider uppercase text-xs">Regal</span>
         </>
       ) : (
         <>

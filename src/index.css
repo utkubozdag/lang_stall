@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import elegant serif font */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
 /* Aristocratic Theme Variables */
 :root {
   --bg-primary: #ffffff;
@@ -13,20 +16,30 @@
   --border-color: #e5e7eb;
   --accent-color: #3b82f6;
   --accent-hover: #2563eb;
+  --accent-subtle: #dbeafe;
   --font-family: ui-sans-serif, system-ui, sans-serif;
+  --font-display: ui-sans-serif, system-ui, sans-serif;
+  --shadow-elegant: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --ornament-color: transparent;
 }
 
 :root.aristocratic {
-  --bg-primary: #FBF9F5;
-  --bg-secondary: #F5F2EB;
-  --bg-tertiary: #EDE8DC;
-  --text-primary: #1A1817;
-  --text-secondary: #3A3634;
-  --text-muted: #4A4543;
-  --border-color: #E0D8C8;
-  --accent-color: #B8963F;
-  --accent-hover: #9A7B32;
-  --font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  --bg-primary: #FAF8F3;
+  --bg-secondary: #F3EFE7;
+  --bg-tertiary: #EBE5D9;
+  --text-primary: #2C2824;
+  --text-secondary: #4A453E;
+  --text-muted: #6B645A;
+  --border-color: #D4CBC0;
+  --accent-color: #996515;
+  --accent-hover: #7A5011;
+  --accent-subtle: #F5EED9;
+  --font-family: 'Crimson Pro', Georgia, Cambria, "Times New Roman", serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --shadow-elegant: 0 2px 8px rgba(44, 40, 36, 0.08), 0 1px 2px rgba(44, 40, 36, 0.04);
+  --shadow-card: 0 1px 4px rgba(44, 40, 36, 0.06);
+  --ornament-color: #C9B896;
 }
 
 /* Theme-aware base styles */
@@ -34,6 +47,8 @@
   font-family: var(--font-family);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
+  letter-spacing: 0.01em;
+  line-height: 1.7;
 }
 
 /* Utility classes for theme-aware components */
@@ -74,34 +89,218 @@
 }
 
 /* Aristocratic specific overrides */
-.aristocratic .theme-card {
+
+/* Elegant headings with display font */
+.aristocratic h1,
+.aristocratic h2,
+.aristocratic h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.aristocratic h1 {
+  font-size: 2.25rem;
+}
+
+.aristocratic h2 {
+  font-size: 1.75rem;
+}
+
+/* Refined card styling */
+.aristocratic .theme-card,
+.aristocratic [class*="rounded-xl"][class*="border"] {
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
-  box-shadow: 0 1px 2px rgba(26, 24, 23, 0.04);
+  box-shadow: var(--shadow-card);
+  position: relative;
 }
 
-.aristocratic .theme-btn-primary {
-  background-color: var(--accent-color);
-  color: #FBF9F5;
-  border: none;
-  transition: background-color 0.2s ease;
+/* Subtle corner ornaments on cards */
+.aristocratic [class*="rounded-xl"][class*="border"]::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--ornament-color);
+  border-left: 1px solid var(--ornament-color);
+  pointer-events: none;
 }
 
-.aristocratic .theme-btn-primary:hover {
-  background-color: var(--accent-hover);
+.aristocratic [class*="rounded-xl"][class*="border"]::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 12px;
+  height: 12px;
+  border-bottom: 1px solid var(--ornament-color);
+  border-right: 1px solid var(--ornament-color);
+  pointer-events: none;
 }
 
+/* Elegant primary buttons */
+.aristocratic .theme-btn-primary,
+.aristocratic button[class*="bg-gold"] {
+  background: linear-gradient(135deg, #A87D1E 0%, #8A6518 100%);
+  color: #FAF8F3;
+  border: 1px solid #7A5011;
+  box-shadow: 0 1px 2px rgba(122, 80, 17, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.aristocratic .theme-btn-primary:hover,
+.aristocratic button[class*="bg-gold"]:hover {
+  background: linear-gradient(135deg, #8A6518 0%, #6B4E12 100%);
+  box-shadow: 0 2px 4px rgba(122, 80, 17, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Secondary buttons with refined borders */
 .aristocratic .theme-btn-secondary {
   background-color: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-color);
+  letter-spacing: 0.04em;
+  transition: all 0.3s ease;
 }
 
 .aristocratic .theme-btn-secondary:hover {
   background-color: var(--bg-tertiary);
+  border-color: var(--ornament-color);
+}
+
+/* Elegant form inputs */
+.aristocratic input[type="text"],
+.aristocratic input[type="email"],
+.aristocratic input[type="password"],
+.aristocratic input[type="url"],
+.aristocratic textarea,
+.aristocratic select {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  font-family: var(--font-family);
+  transition: all 0.3s ease;
+}
+
+.aristocratic input:focus,
+.aristocratic textarea:focus,
+.aristocratic select:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+  outline: none;
+}
+
+/* Refined header styling */
+.aristocratic header {
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-elegant);
+}
+
+/* Add decorative line under header nav items on hover */
+.aristocratic nav button {
+  position: relative;
+}
+
+.aristocratic nav button::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 0;
+  height: 1px;
+  background-color: var(--accent-color);
+  transition: all 0.3s ease;
+  transform: translateX(-50%);
+}
+
+.aristocratic nav button:hover::after {
+  width: 60%;
+}
+
+/* Elegant divider */
+.aristocratic hr,
+.aristocratic .divider {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--ornament-color) 20%,
+    var(--ornament-color) 80%,
+    transparent
+  );
+  margin: 2rem 0;
+}
+
+/* Decorative flourish class */
+.aristocratic .flourish {
+  text-align: center;
+  color: var(--ornament-color);
+  font-size: 1.25rem;
+  letter-spacing: 0.5em;
+  margin: 1.5rem 0;
+}
+
+.aristocratic .flourish::before {
+  content: '— ✦ —';
+}
+
+/* Badge/tag refinement */
+.aristocratic [class*="rounded"][class*="text-xs"][class*="font-medium"] {
+  border: 1px solid var(--ornament-color);
+  background-color: var(--accent-subtle);
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+}
+
+/* Elegant scrollbar */
+.aristocratic ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.aristocratic ::-webkit-scrollbar-track {
+  background: var(--bg-tertiary);
+}
+
+.aristocratic ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.aristocratic ::-webkit-scrollbar-thumb:hover {
+  background: var(--ornament-color);
+}
+
+/* Selection styling */
+.aristocratic ::selection {
+  background-color: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+/* Link styling */
+.aristocratic a:not([class]) {
+  color: var(--accent-color);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s ease;
+}
+
+.aristocratic a:not([class]):hover {
+  border-bottom-color: var(--accent-color);
 }
 
 /* Smooth transitions when switching themes */
 * {
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
