@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import api from '../services/api';
 import { Text } from '../types';
 import Logo from '../components/Logo';
+import ThemeToggle from '../components/ThemeToggle';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Toast from '../components/Toast';
 import { LANGUAGES } from '../constants/languages';
@@ -18,6 +20,7 @@ interface SustainabilityStats {
 
 export default function Home() {
   const { user, token, logout } = useAuth();
+  const { isAristocratic } = useTheme();
   const navigate = useNavigate();
 
   // Data state
@@ -183,9 +186,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen theme-bg-secondary theme-font ${isAristocratic ? 'aristocratic' : ''}`}>
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <header className="theme-bg-primary border-b theme-border sticky top-0 z-10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex justify-between items-center h-14">
             <Logo size="sm" />
@@ -194,39 +197,40 @@ export default function Home() {
             <nav className="hidden md:flex items-center gap-1">
               <button
                 onClick={() => navigate('/guide')}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded font-medium transition"
+                className="px-3 py-2 text-sm theme-text-secondary hover:theme-text-primary focus-visible:ring-2 focus-visible:ring-offset-2 rounded font-medium transition"
               >
                 Guide
               </button>
               <button
                 onClick={() => navigate('/vocabulary')}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded font-medium transition"
+                className="px-3 py-2 text-sm theme-text-secondary hover:theme-text-primary focus-visible:ring-2 focus-visible:ring-offset-2 rounded font-medium transition"
               >
                 Vocabulary
               </button>
               <button
                 onClick={() => navigate('/flashcards')}
-                className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded font-medium transition"
+                className="px-3 py-2 text-sm theme-text-secondary hover:theme-text-primary focus-visible:ring-2 focus-visible:ring-offset-2 rounded font-medium transition"
               >
                 Practice
               </button>
               <button
                 onClick={() => navigate('/about')}
-                className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded transition"
+                className="px-3 py-2 text-sm theme-text-muted hover:theme-text-secondary focus-visible:ring-2 focus-visible:ring-offset-2 rounded transition"
               >
                 About
               </button>
+              <ThemeToggle />
               {token ? (
                 <button
                   onClick={logout}
-                  className="px-3 py-2 text-sm text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded transition"
+                  className="px-3 py-2 text-sm theme-text-muted hover:theme-text-secondary focus-visible:ring-2 focus-visible:ring-offset-2 rounded transition"
                 >
                   Logout
                 </button>
               ) : (
                 <button
                   onClick={() => navigate('/login')}
-                  className="px-3 py-2 text-sm text-blue-600 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded font-medium transition"
+                  className="px-3 py-2 text-sm theme-accent hover:opacity-80 focus-visible:ring-2 focus-visible:ring-offset-2 rounded font-medium transition"
                 >
                   Login
                 </button>
@@ -235,9 +239,10 @@ export default function Home() {
 
             {/* Mobile navigation */}
             <nav className="md:hidden flex items-center gap-1">
+              <ThemeToggle />
               <button
                 onClick={() => navigate('/vocabulary')}
-                className="p-2 text-gray-600 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition"
+                className="p-2 theme-text-secondary hover:theme-text-primary focus-visible:ring-2 rounded transition"
                 aria-label="Vocabulary"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -246,7 +251,7 @@ export default function Home() {
               </button>
               <button
                 onClick={() => navigate('/flashcards')}
-                className="p-2 text-gray-600 hover:text-gray-900 focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition"
+                className="p-2 theme-text-secondary hover:theme-text-primary focus-visible:ring-2 rounded transition"
                 aria-label="Practice flashcards"
               >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,7 +261,7 @@ export default function Home() {
               {token ? (
                 <button
                   onClick={logout}
-                  className="p-2 text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition"
+                  className="p-2 theme-text-muted hover:theme-text-secondary focus-visible:ring-2 rounded transition"
                   aria-label="Logout"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +271,7 @@ export default function Home() {
               ) : (
                 <button
                   onClick={() => navigate('/login')}
-                  className="p-2 text-blue-600 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 rounded transition"
+                  className="p-2 theme-accent hover:opacity-80 focus-visible:ring-2 rounded transition"
                   aria-label="Login"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -282,10 +287,10 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Welcome Section */}
         <div className="mb-6">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-1">
+          <h2 className="text-2xl sm:text-3xl font-bold theme-text-primary mb-1">
             {token ? `Welcome back, ${user?.name}` : 'Welcome'}
           </h2>
-          <p className="text-gray-600">Continue your language learning journey</p>
+          <p className="theme-text-secondary">Continue your language learning journey</p>
         </div>
 
         {/* Public space notice for anonymous users */}
@@ -336,7 +341,11 @@ export default function Home() {
           <div className="mb-6">
             <button
               onClick={() => setShowNewText(true)}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 transition font-medium flex items-center gap-2"
+              className={`px-5 py-2.5 text-white rounded-lg focus-visible:ring-2 focus-visible:ring-offset-2 transition font-medium flex items-center gap-2 ${
+                isAristocratic
+                  ? 'bg-gold-500 hover:bg-gold-600 focus-visible:ring-gold-500'
+                  : 'bg-blue-600 hover:bg-blue-700 focus-visible:ring-blue-500'
+              }`}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -529,10 +538,14 @@ export default function Home() {
               <div
                 key={text.id}
                 onClick={() => navigate(`/read/${text.id}`)}
-                className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-5 hover:shadow-md hover:border-blue-200 transition cursor-pointer group"
+                className={`theme-bg-primary rounded-xl shadow-sm border theme-border p-4 sm:p-5 hover:shadow-md transition cursor-pointer group ${
+                  isAristocratic ? 'hover:border-gold-400' : 'hover:border-blue-200'
+                }`}
               >
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition line-clamp-1 pr-2">
+                  <h3 className={`text-base sm:text-lg font-semibold theme-text-primary transition line-clamp-1 pr-2 ${
+                    isAristocratic ? 'group-hover:text-gold-600' : 'group-hover:text-blue-600'
+                  }`}>
                     {text.title}
                   </h3>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
@@ -557,14 +570,18 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 mb-3">
-                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    isAristocratic
+                      ? 'bg-ivory-300 text-charcoal-700'
+                      : 'bg-blue-50 text-blue-700'
+                  }`}>
                     {text.language}
                   </span>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs theme-text-muted">
                     {new Date(text.created_at).toLocaleDateString()}
                   </span>
                 </div>
-                <p className="text-gray-500 text-sm line-clamp-2">{text.content}</p>
+                <p className="theme-text-secondary text-sm line-clamp-2">{text.content}</p>
               </div>
             ))}
           </div>

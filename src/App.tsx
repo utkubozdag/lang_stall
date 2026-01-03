@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import Home from './pages/Home';
 import Reader from './pages/Reader';
 import Vocabulary from './pages/Vocabulary';
@@ -15,8 +16,8 @@ function LoadingWrapper({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
+      <div className="min-h-screen theme-bg-secondary flex items-center justify-center">
+        <div className="text-xl theme-text-primary theme-font">Loading...</div>
       </div>
     );
   }
@@ -27,21 +28,23 @@ function LoadingWrapper({ children }: { children: React.ReactNode }) {
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <LoadingWrapper>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/read/:id" element={<Reader />} />
-            <Route path="/vocabulary" element={<Vocabulary />} />
-            <Route path="/flashcards" element={<Flashcards />} />
-            <Route path="/guide" element={<Guide />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/verify" element={<Verify />} />
-          </Routes>
-        </LoadingWrapper>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <LoadingWrapper>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/read/:id" element={<Reader />} />
+              <Route path="/vocabulary" element={<Vocabulary />} />
+              <Route path="/flashcards" element={<Flashcards />} />
+              <Route path="/guide" element={<Guide />} />
+              <Route path="/about" element={<About />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/verify" element={<Verify />} />
+            </Routes>
+          </LoadingWrapper>
+        </AuthProvider>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }
