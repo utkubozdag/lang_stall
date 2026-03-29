@@ -146,7 +146,7 @@ Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like 
     }
 
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
       {
         method: 'POST',
         headers: {
@@ -165,8 +165,8 @@ Mnemonic: [ONE sentence only using ${target} words that PHONETICALLY sound like 
     };
 
     if (!response.ok) {
-      console.error('Gemini API error:', data);
-      return res.status(500).json({ error: 'Translation failed' });
+      console.error('Gemini API error:', data.error || data);
+      return res.status(500).json({ error: data.error?.message || 'Translation failed. Please try again.' });
     }
 
     const fullResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 'Translation not available';
